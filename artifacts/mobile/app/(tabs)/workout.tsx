@@ -71,6 +71,59 @@ export default function WorkoutScreen() {
           Workouts
         </Text>
 
+        {/* Feature cards row */}
+        <View style={styles.featureRow}>
+          {/* Weekly Plan */}
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push("/workout/weekly-plan" as any);
+            }}
+            activeOpacity={0.85}
+            style={styles.featureCardHalf}
+          >
+            <LinearGradient
+              colors={[colors.primary, colors.purple]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.featureCardInner, { borderRadius: colors.radius }]}
+            >
+              <Ionicons name="calendar" size={28} color="#FFFFFF" />
+              <Text style={[styles.featureCardTitle, { fontFamily: "Inter_700Bold" }]}>
+                Weekly Plan
+              </Text>
+              <Text style={[styles.featureCardSub, { fontFamily: "Inter_400Regular" }]}>
+                PPL, Upper/Lower & more
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* InBody */}
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push("/inbody" as any);
+            }}
+            activeOpacity={0.85}
+            style={styles.featureCardHalf}
+          >
+            <LinearGradient
+              colors={[colors.secondary, "#FF4757"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.featureCardInner, { borderRadius: colors.radius }]}
+            >
+              <Ionicons name="scan" size={28} color="#FFFFFF" />
+              <Text style={[styles.featureCardTitle, { fontFamily: "Inter_700Bold" }]}>
+                InBody Analysis
+              </Text>
+              <Text style={[styles.featureCardSub, { fontFamily: "Inter_400Regular" }]}>
+                AI body composition plan
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
         {/* Start workout CTA */}
         <TouchableOpacity
           onPress={() => {
@@ -238,6 +291,11 @@ const styles = StyleSheet.create({
   headerGrad: { position: "absolute", top: 0, left: 0, right: 0, height: 200 },
   scroll: { paddingHorizontal: 16, gap: 14 },
   pageTitle: { fontSize: 28, marginBottom: 4 },
+  featureRow: { flexDirection: "row", gap: 10 },
+  featureCardHalf: { flex: 1, borderRadius: 16, overflow: "hidden" },
+  featureCardInner: { padding: 16, gap: 8, minHeight: 130, justifyContent: "flex-end" },
+  featureCardTitle: { color: "#FFFFFF", fontSize: 15 },
+  featureCardSub: { color: "#FFFFFF99", fontSize: 12 },
   startBtn: { borderRadius: 20, overflow: "hidden" },
   startBtnInner: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20 },
   startBtnContent: { flexDirection: "row", alignItems: "center", gap: 14 },

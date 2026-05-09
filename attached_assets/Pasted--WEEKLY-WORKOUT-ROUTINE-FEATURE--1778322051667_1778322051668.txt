@@ -1,0 +1,147 @@
+========================================
+WEEKLY WORKOUT ROUTINE FEATURE
+========================================
+
+Create a smart weekly workout planning system.
+
+Features:
+- Trainers can assign weekly workout routines
+- Members can view weekly schedules
+- Calendar-based workout planner
+- Rest day planning
+- Muscle group split planning
+- Push reminders for workout days
+- Workout completion tracking
+- Weekly progress analytics
+- Auto progression tracking
+- AI-generated weekly workout routines
+
+Workout routine examples:
+- Push Pull Legs
+- Bro Split
+- Upper Lower
+- Fat Loss Routine
+- Muscle Gain Routine
+- Beginner Routine
+- Home Workout Routine
+
+Each weekly plan should include:
+- Exercise name
+- Sets
+- Reps
+- Rest time
+- Exercise videos
+- Notes from trainer
+- Workout duration
+- Calories burned estimate
+
+========================================
+INBODY REPORT ANALYSIS FEATURE
+========================================
+
+Create a feature where users can upload their InBody/body composition report.
+
+Supported uploads:
+- PDF
+- Image
+- Camera scan
+
+The system should:
+- Extract body metrics using AI/OCR
+- Analyze:
+  - Weight
+  - Skeletal muscle mass
+  - Body fat percentage
+  - BMI
+  - Visceral fat
+  - Water retention
+  - Protein level
+  - Metabolism
+  - Segmental muscle analysis
+
+After analysis, show a smart popup/modal:
+
+========================================
+SMART FITNESS PLAN POPUP
+========================================
+
+Popup message example:
+
+"We analyzed your InBody report.
+Would you like:
+1. Personalized Trainer Guidance
+2. AI Generated Fitness Plan"
+
+Buttons:
+- Connect with Trainer
+- Use AI Plan
+
+========================================
+TRAINER FLOW
+========================================
+
+If user selects:
+"Connect with Trainer"
+
+Then:
+- Assign trainer
+- Trainer receives notification
+- Trainer can create:
+  - Diet plan
+  - Workout plan
+  - Weekly routines
+  - Goal tracking
+- Enable trainer-member chat
+- Enable progress monitoring
+
+========================================
+AI FLOW
+========================================
+
+If user selects:
+"Use AI Plan"
+
+Then AI generates:
+- Fat loss plan
+- Muscle gain plan
+- Maintenance plan
+- Weekly workout schedule
+- Daily calorie target
+- Macro breakdown
+- Meal recommendations
+- Water intake goals
+- Cardio recommendations
+- Recovery recommendations
+
+AI should generate plans based on:
+- Body fat %
+- Muscle mass
+- Weight
+- Fitness goal
+- Age
+- Gender
+- Activity level
+
+========================================
+PROGRESS RE-EVALUATION
+========================================
+
+Every month:
+- Ask user to upload new InBody report
+- Compare old vs new metrics
+- Show transformation analytics
+- Show muscle gained
+- Show fat lost
+- Show progress charts
+
+========================================
+ANALYTICS
+========================================
+
+Create beautiful visual analytics for:
+- Weight changes
+- Body fat reduction
+- Muscle gain
+- Weekly workout consistency
+- Calorie deficit/surplus
+- Goal progress

@@ -31,6 +31,14 @@ function RootLayoutNav() {
         name="analytics"
         options={{ animation: "slide_from_right", headerShown: false }}
       />
+      <Stack.Screen
+        name="inbody"
+        options={{ animation: "slide_from_right", headerShown: false }}
+      />
+      <Stack.Screen
+        name="workout/weekly-plan"
+        options={{ animation: "slide_from_right", headerShown: false }}
+      />
     </Stack>
   );
 }

@@ -1,6 +1,6 @@
-# [Project name]
+# FitTrack — Gym Management & Fitness Tracking App
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A premium mobile app for gym management and fitness tracking, targeting local Indian gyms. Supports members, trainers, and gym owners.
 
 ## Run & Operate
 
@@ -14,6 +14,7 @@ _Replace the heading above with the project's name, and this line with one sente
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
+- Mobile: React Native + Expo (SDK 54), expo-router
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
@@ -22,23 +23,45 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/mobile/` — Expo mobile app
+- `artifacts/mobile/app/` — Expo Router screens
+- `artifacts/mobile/app/(auth)/` — Onboarding + Login
+- `artifacts/mobile/app/(tabs)/` — Main tab screens (Home, Workout, Diet, Gym, Profile)
+- `artifacts/mobile/app/analytics.tsx` — Analytics screen
+- `artifacts/mobile/context/AuthContext.tsx` — Auth state with role switching
+- `artifacts/mobile/context/FitnessContext.tsx` — Fitness data (calories, water, meals, workouts)
+- `artifacts/mobile/components/ui/` — Reusable UI components
+- `artifacts/mobile/constants/colors.ts` — Design tokens (dark navy + electric blue theme)
+- `artifacts/api-server/` — Express API server
+- `lib/api-spec/openapi.yaml` — OpenAPI contract
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Frontend-only for first build: all data persisted via AsyncStorage (no backend calls yet)
+- Three user roles: member, trainer, owner — switch via Profile tab for demo
+- Dark navy (#070B14) + electric cyan (#00D4FF) theme — premium fitness aesthetic
+- Animated progress rings (react-native-reanimated) for calorie/water tracking
+- Indian food database pre-loaded with 500+ items in Diet tab
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **Member**: Dashboard with calorie/water/macro rings, workout logging, Indian food diet tracker, QR check-in, slot/trainer booking, achievements, analytics
+- **Trainer**: Panel showing trainer-specific UI
+- **Owner**: Gym overview with member count, attendance, revenue stats
+- Onboarding flow → role-based login → 5-tab navigation
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Build mobile-first, native UI patterns
+- Dark mode by default
+- No emojis in UI (except greeting in dashboard)
+- Indian food focus for diet tracking
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- User role is stored in AsyncStorage; switching role reloads the user object
+- AsyncStorage key: `@fittrack_user` for auth, `@fittrack_today` for daily fitness log
+- Scan QR in Expo Go via the QR code in Replit's URL bar to test on physical device
 
 ## Pointers
 

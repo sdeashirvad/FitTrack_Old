@@ -1,0 +1,225 @@
+Build a modern MOBILE APPLICATION for gym management and fitness tracking.
+
+IMPORTANT:
+- This is ONLY a MOBILE APP.
+- DO NOT build a website.
+- Use native mobile app UI/UX patterns.
+- Optimize for Android and iOS.
+- Use mobile-first layouts.
+- Use touch-friendly UI.
+- Use bottom tab navigation.
+- Use stack navigation.
+
+========================================
+PROJECT OVERVIEW
+========================================
+
+Create a fitness tracking and gym management mobile app for local gyms in India that do not have their own apps like CultFit.
+
+The app should support:
+- Gym members
+- Trainers
+- Gym owners
+
+The app should feel like:
+- CultFit
+- HealthifyMe
+- Nike Training Club
+- MyFitnessPal
+
+========================================
+TECH STACK
+========================================
+
+Frontend:
+- React Native
+- Expo
+- TypeScript
+
+State Management:
+- Zustand or Redux Toolkit
+
+Backend:
+- Node.js APIs
+
+Database:
+- PostgreSQL
+
+Authentication:
+- JWT Authentication
+- Google Login
+- Phone OTP Login
+- Biometric login
+
+Notifications:
+- Push notifications
+
+Storage:
+- Cloudinary or S3
+
+========================================
+MOBILE FEATURES
+========================================
+
+Use:
+- Bottom tab navigation
+- Stack navigation
+- Swipe gestures
+- Pull to refresh
+- Native animations
+- Skeleton loading
+- Haptic feedback
+- Mobile optimized charts
+
+========================================
+USER ROLES
+========================================
+
+1. Gym Member
+2. Trainer
+3. Gym Owner
+
+========================================
+MEMBER FEATURES
+========================================
+
+Dashboard:
+- Calories tracking
+- Water tracking
+- Weight tracking
+- BMI tracking
+- Workout streaks
+- Progress analytics
+
+Workout:
+- Exercise tracking
+- Sets/reps logging
+- Rest timer
+- Workout history
+- AI workout suggestions
+
+Diet:
+- Meal logging
+- Macro tracking
+- Indian food calorie tracking
+- Barcode scanner
+- AI calorie recommendations
+
+Gym:
+- QR attendance scanner
+- Membership renewal
+- Slot booking
+- Trainer booking
+
+Social:
+- Community feed
+- Challenges
+- Leaderboards
+- Achievement badges
+
+========================================
+TRAINER FEATURES
+========================================
+
+- Assigned members
+- Workout assignment
+- Diet assignment
+- Progress tracking
+- Member chat
+- Attendance tracking
+
+========================================
+GYM OWNER FEATURES
+========================================
+
+- Member management
+- Attendance analytics
+- Revenue analytics
+- Trainer management
+- Membership plans
+
+========================================
+AI FEATURES
+========================================
+
+Integrate:
+- AI fitness chatbot
+- AI workout generator
+- AI diet recommendation
+- AI motivation notifications
+- AI progress analysis
+
+========================================
+DEVICE FEATURES
+========================================
+
+Integrate:
+- Camera for QR scanning
+- Push notifications
+- Local storage
+- Biometric authentication
+- Image upload
+- Deep linking
+
+========================================
+UI/UX
+========================================
+
+Use:
+- Premium modern UI
+- Smooth animations
+- Floating cards
+- Dark mode
+- Glassmorphism
+- Mobile-first design
+- Premium gradients
+
+========================================
+SCREENS REQUIRED
+========================================
+
+Create:
+- Splash screen
+- Onboarding
+- Login/Register
+- Home dashboard
+- Workout tracking
+- Diet tracking
+- Attendance scanner
+- Analytics screen
+- Profile screen
+- Membership screen
+- Community feed
+
+========================================
+API INTEGRATION
+========================================
+
+Connect with backend APIs for:
+- Authentication
+- Workout tracking
+- Attendance
+- Diet tracking
+- Analytics
+- Notifications
+
+========================================
+OUTPUT REQUIREMENTS
+========================================
+
+Generate:
+1. Folder structure
+2. Navigation setup
+3. Authentication flow
+4. API integration setup
+5. Reusable UI components
+6. Mobile optimized screens
+7. State management setup
+8. Push notification setup
+
+Start with:
+1. Splash screen
+2. Authentication
+3. Bottom tab navigation
+4. Home dashboard
+5. Workout tracking

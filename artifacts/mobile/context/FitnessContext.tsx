@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Pedometer } from "expo-sensors";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 export interface WorkoutSet {
@@ -44,9 +45,38 @@ export interface DailyLog {
   steps: number;
 }
 
+export interface InBodyReport {
+  id: string;
+  uri: string;
+  source: "camera" | "library";
+  fileName: string;
+  uploadedAt: string;
+}
+
+export interface ConnectedDevice {
+  id: string;
+  name: string;
+  type: "phone" | "fit_band" | "smartwatch";
+  provider: "phone_sensors" | "google_fit" | "apple_health" | "fitbit" | "garmin";
+  status: "connected" | "available";
+  lastSync?: string;
+}
+
+export interface ActivitySummary {
+  steps: number;
+  walkingMinutes: number;
+  runningMinutes: number;
+  sleepHours: number;
+  caloriesBurned: number;
+  distanceKm: number;
+}
+
 interface FitnessContextType {
   todayLog: DailyLog;
   recentWorkouts: Workout[];
+  inBodyReports: InBodyReport[];
+  connectedDevices: ConnectedDevice[];
+  activitySummary: ActivitySummary;
   calorieGoal: number;
   waterGoal: number;
   streak: number;
@@ -55,6 +85,8 @@ interface FitnessContextType {
   addMeal: (meal: Omit<Meal, "id">) => Promise<void>;
   removeMeal: (id: string) => Promise<void>;
   addWorkout: (workout: Omit<Workout, "id">) => Promise<void>;
+  addInBodyReport: (report: Omit<InBodyReport, "id" | "uploadedAt">) => Promise<void>;
+  connectDevice: (deviceId: string) => Promise<void>;
   bmi: number;
   weeklyCalories: number[];
 }
@@ -172,10 +204,55 @@ const sampleWorkouts: Workout[] = [
   },
 ];
 
+const defaultDevices: ConnectedDevice[] = [
+  {
+    id: "phone",
+    name: "Phone sensors",
+    type: "phone",
+    provider: "phone_sensors",
+    status: "available",
+  },
+  {
+    id: "google-fit",
+    name: "Google Fit",
+    type: "fit_band",
+    provider: "google_fit",
+    status: "available",
+  },
+  {
+    id: "apple-health",
+    name: "Apple Health",
+    type: "smartwatch",
+    provider: "apple_health",
+    status: "available",
+  },
+  {
+    id: "fitbit",
+    name: "Fitbit",
+    type: "fit_band",
+    provider: "fitbit",
+    status: "available",
+  },
+];
+
+const defaultActivitySummary: ActivitySummary = {
+  steps: defaultLog.steps,
+  walkingMinutes: 46,
+  runningMinutes: 18,
+  sleepHours: 7.2,
+  caloriesBurned: 540,
+  distanceKm: 5.8,
+};
+
 export function FitnessProvider({ children }: { children: React.ReactNode }) {
   const [todayLog, setTodayLog] = useState<DailyLog>(defaultLog);
   const [recentWorkouts, setRecentWorkouts] =
     useState<Workout[]>(sampleWorkouts);
+  const [inBodyReports, setInBodyReports] = useState<InBodyReport[]>([]);
+  const [connectedDevices, setConnectedDevices] =
+    useState<ConnectedDevice[]>(defaultDevices);
+  const [activitySummary, setActivitySummary] =
+    useState<ActivitySummary>(defaultActivitySummary);
 
   useEffect(() => {
     loadData();
@@ -184,14 +261,29 @@ export function FitnessProvider({ children }: { children: React.ReactNode }) {
   const loadData = async () => {
     try {
       const stored = await AsyncStorage.getItem("@fittrack_today");
+      let hasCurrentLog = false;
       if (stored) {
         const parsed = JSON.parse(stored) as DailyLog;
         if (parsed.date === today) {
           setTodayLog(parsed);
-          return;
+          hasCurrentLog = true;
         }
       }
-      await AsyncStorage.setItem("@fittrack_today", JSON.stringify(defaultLog));
+      const storedReports = await AsyncStorage.getItem("@fittrack_inbody_reports");
+      if (storedReports) {
+        setInBodyReports(JSON.parse(storedReports) as InBodyReport[]);
+      }
+
+      const storedDevices = await AsyncStorage.getItem("@fittrack_connected_devices");
+      if (storedDevices) {
+        const devices = JSON.parse(storedDevices) as ConnectedDevice[];
+        setConnectedDevices(devices);
+        syncActivityFromDevices(devices);
+      }
+
+      if (!hasCurrentLog) {
+        await AsyncStorage.setItem("@fittrack_today", JSON.stringify(defaultLog));
+      }
     } catch (e) {}
   };
 
@@ -206,6 +298,74 @@ export function FitnessProvider({ children }: { children: React.ReactNode }) {
       water: Math.min(todayLog.water + cups, 12),
     };
     await save(updated);
+  };
+
+  const addInBodyReport = async (
+    report: Omit<InBodyReport, "id" | "uploadedAt">,
+  ) => {
+    const newReport: InBodyReport = {
+      ...report,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      uploadedAt: new Date().toISOString(),
+    };
+    const updated = [newReport, ...inBodyReports];
+    setInBodyReports(updated);
+    await AsyncStorage.setItem(
+      "@fittrack_inbody_reports",
+      JSON.stringify(updated),
+    );
+  };
+
+  const connectDevice = async (deviceId: string) => {
+    const now = new Date().toISOString();
+    const phoneSteps = deviceId === "phone" ? await getPhoneSensorSteps() : undefined;
+    const updated = connectedDevices.map((device) =>
+      device.id === deviceId
+        ? { ...device, status: "connected" as const, lastSync: now }
+        : device,
+    );
+    setConnectedDevices(updated);
+    await AsyncStorage.setItem(
+      "@fittrack_connected_devices",
+      JSON.stringify(updated),
+    );
+    syncActivityFromDevices(updated, phoneSteps);
+  };
+
+  const syncActivityFromDevices = (devices: ConnectedDevice[], phoneSteps?: number) => {
+    const connectedCount = devices.filter((d) => d.status === "connected").length;
+    const steps = phoneSteps ?? defaultLog.steps + connectedCount * 420;
+    setActivitySummary({
+      ...defaultActivitySummary,
+      steps,
+      walkingMinutes: defaultActivitySummary.walkingMinutes + connectedCount * 4,
+      runningMinutes: defaultActivitySummary.runningMinutes + connectedCount * 2,
+      sleepHours: Math.min(8.4, defaultActivitySummary.sleepHours + connectedCount * 0.2),
+      caloriesBurned: defaultActivitySummary.caloriesBurned + connectedCount * 55,
+      distanceKm: Number((defaultActivitySummary.distanceKm + connectedCount * 0.35).toFixed(1)),
+    });
+  };
+
+  const getPhoneSensorSteps = async () => {
+    try {
+      const isAvailable = await Pedometer.isAvailableAsync();
+      if (!isAvailable) {
+        return undefined;
+      }
+
+      const permission = await Pedometer.requestPermissionsAsync();
+      if (!permission.granted) {
+        return undefined;
+      }
+
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date();
+      const result = await Pedometer.getStepCountAsync(start, end);
+      return result.steps;
+    } catch {
+      return undefined;
+    }
   };
 
   const logWeight = async (weight: number) => {
@@ -262,6 +422,9 @@ export function FitnessProvider({ children }: { children: React.ReactNode }) {
       value={{
         todayLog,
         recentWorkouts,
+        inBodyReports,
+        connectedDevices,
+        activitySummary,
         calorieGoal: 2200,
         waterGoal: 8,
         streak: 12,
@@ -270,6 +433,8 @@ export function FitnessProvider({ children }: { children: React.ReactNode }) {
         addMeal,
         removeMeal,
         addWorkout,
+        addInBodyReport,
+        connectDevice,
         bmi,
         weeklyCalories,
       }}

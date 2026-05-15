@@ -14,9 +14,16 @@
       "backgroundColor": "#070B14"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "FitTrack uses the camera to capture InBody and body composition reports.",
+        "NSPhotoLibraryUsageDescription": "FitTrack uses your photo library to upload existing InBody reports.",
+        "NSMotionUsageDescription": "FitTrack uses motion data to track walking, running, and activity summaries."
+      }
     },
-    "android": {},
+    "android": {
+      "permissions": ["CAMERA", "READ_MEDIA_IMAGES", "ACTIVITY_RECOGNITION"]
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -25,6 +32,14 @@
         "expo-router",
         {
           "origin": "https://replit.com/"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "FitTrack uses the camera to capture InBody and body composition reports.",
+          "photosPermission": "FitTrack uses your photo library to upload existing InBody reports.",
+          "microphonePermission": false
         }
       ],
       "expo-font",

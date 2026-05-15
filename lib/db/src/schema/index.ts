@@ -1,20 +1,50 @@
-// Export your models here. Add one export per file
-// export * from "./posts";
-//
-// Each model/table should ideally be split into different files.
-// Each model/table should define a Drizzle table, insert schema, and types:
-//
-//   import { pgTable, text, serial } from "drizzle-orm/pg-core";
-//   import { createInsertSchema } from "drizzle-zod";
-//   import { z } from "zod/v4";
-//
-//   export const postsTable = pgTable("posts", {
-//     id: serial("id").primaryKey(),
-//     title: text("title").notNull(),
-//   });
-//
-//   export const insertPostSchema = createInsertSchema(postsTable).omit({ id: true });
-//   export type InsertPost = z.infer<typeof insertPostSchema>;
-//   export type Post = typeof postsTable.$inferSelect;
+export * from "./lookups";
+export * from "./users";
+export * from "./gyms";
+export * from "./memberships";
+export * from "./attendance";
+export * from "./scheduling";
+export * from "./workouts";
+export * from "./diet";
+export * from "./analytics";
+export * from "./communications";
+export * from "./support";
+export * from "./reviews";
+export * from "./files";
+export * from "./audit";
+export * from "./security";
+export * from "./ai";
 
-export {}
+import * as usersSchema from "./users";
+import * as gymsSchema from "./gyms";
+import * as membershipsSchema from "./memberships";
+import * as attendanceSchema from "./attendance";
+import * as schedulingSchema from "./scheduling";
+import * as workoutsSchema from "./workouts";
+import * as dietSchema from "./diet";
+import * as analyticsSchema from "./analytics";
+import * as communicationsSchema from "./communications";
+import * as supportSchema from "./support";
+import * as reviewsSchema from "./reviews";
+import * as filesSchema from "./files";
+import * as auditSchema from "./audit";
+import * as securitySchema from "./security";
+import * as aiSchema from "./ai";
+
+export const schema = {
+  ...usersSchema,
+  ...gymsSchema,
+  ...membershipsSchema,
+  ...attendanceSchema,
+  ...schedulingSchema,
+  ...workoutsSchema,
+  ...dietSchema,
+  ...analyticsSchema,
+  ...communicationsSchema,
+  ...supportSchema,
+  ...reviewsSchema,
+  ...filesSchema,
+  ...auditSchema,
+  ...securitySchema,
+  ...aiSchema,
+};

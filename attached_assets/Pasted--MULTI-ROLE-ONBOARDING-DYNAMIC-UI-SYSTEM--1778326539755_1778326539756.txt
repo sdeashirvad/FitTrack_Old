@@ -1,0 +1,290 @@
+========================================
+MULTI-ROLE ONBOARDING & DYNAMIC UI SYSTEM
+========================================
+
+Create a role-based onboarding and UI system where users can select their role during signup/login.
+
+IMPORTANT:
+Each role must have:
+- Completely different dashboard UI
+- Different navigation
+- Different permissions
+- Different workflows
+- Different analytics
+- Different features
+- Different home screens
+
+The application should dynamically render UI based on user role.
+
+========================================
+USER ROLE SELECTION
+========================================
+
+During onboarding/signup, show a modern role selection screen.
+
+Roles:
+1. Gym Owner / Gym Admin
+2. Trainer
+3. Gym Member / Fitness User
+
+Use:
+- Large modern selection cards
+- Icons/illustrations
+- Smooth animations
+- Role descriptions
+- Hover/touch effects
+
+Example:
+--------------------------------
+Select Your Role
+
+[ Gym Owner ]
+Manage your gym, trainers, members, attendance, and analytics.
+
+[ Trainer ]
+Manage client workouts, diets, transformations, and progress.
+
+[ Gym Member ]
+Track workouts, calories, body progress, and gym activity.
+--------------------------------
+
+After role selection:
+- Store role in database
+- Redirect to role-specific onboarding
+- Generate role-specific dashboard
+
+========================================
+ROLE-BASED UI SYSTEM
+========================================
+
+The UI architecture must support:
+- Dynamic sidebar menus
+- Dynamic dashboard widgets
+- Dynamic routes/pages
+- Dynamic permissions
+- Dynamic analytics
+- Dynamic notifications
+
+Each role should feel like a completely different product experience.
+
+========================================
+GYM OWNER UI
+========================================
+
+Gym Owner dashboard should look like:
+- SaaS admin dashboard
+- Business analytics platform
+
+UI Features:
+- Sidebar navigation
+- Revenue charts
+- Member growth analytics
+- Attendance heatmaps
+- Subscription management
+- Trainer management
+- Gym settings
+- Batch management
+- Equipment management
+- Payment analytics
+
+Dashboard Widgets:
+- Total members
+- Active memberships
+- Monthly revenue
+- Attendance analytics
+- Gym growth charts
+- Trainer performance
+- Retention analytics
+
+Theme:
+- Professional
+- Corporate
+- Data-heavy
+- Analytics-focused
+
+========================================
+TRAINER UI
+========================================
+
+Trainer dashboard should look like:
+- Personal coaching system
+- Client management platform
+
+UI Features:
+- Assigned clients
+- Workout planner
+- Diet planner
+- Transformation gallery
+- Progress tracking
+- Weekly routine creation
+- Client messaging
+- Appointment scheduling
+
+Dashboard Widgets:
+- Assigned members
+- Client progress
+- Active plans
+- Workout completion
+- Client streaks
+- Pending check-ins
+
+Theme:
+- Fitness-focused
+- Coaching-centric
+- Progress-oriented
+
+========================================
+MEMBER / FITNESS USER UI
+========================================
+
+Member dashboard should look like:
+- Modern fitness app
+- Lifestyle tracker
+
+UI Features:
+- Workout tracking
+- Calories tracking
+- Water tracking
+- AI recommendations
+- Weekly routines
+- QR attendance
+- Gym booking
+- Social feed
+- Achievement badges
+
+Dashboard Widgets:
+- Today's workout
+- Calories consumed
+- Protein intake
+- Water intake
+- Weekly streak
+- Weight progress
+- AI fitness score
+
+Theme:
+- Motivational
+- Modern
+- Gamified
+- Minimal and clean
+
+========================================
+ROLE-BASED NAVIGATION
+========================================
+
+Gym Owner Navigation:
+- Dashboard
+- Members
+- Trainers
+- Payments
+- Analytics
+- Attendance
+- Gym Settings
+
+Trainer Navigation:
+- Dashboard
+- Clients
+- Workout Plans
+- Diet Plans
+- Progress Tracking
+- Schedule
+- Messages
+
+Member Navigation:
+- Home
+- Workout
+- Diet
+- Progress
+- Attendance
+- Community
+- Profile
+
+========================================
+ROLE-BASED AUTHENTICATION
+========================================
+
+Implement:
+- Role-based access control
+- Protected routes
+- Permission middleware
+- API authorization
+- Dynamic redirects after login
+
+Examples:
+- Trainers cannot access owner analytics
+- Members cannot access admin controls
+- Owners can manage all gym data
+
+========================================
+DATABASE REQUIREMENTS
+========================================
+
+Users table should include:
+- role
+- gym_id
+- trainer_id
+- permissions
+- onboarding_completed
+
+========================================
+ONBOARDING FLOW
+========================================
+
+Each role should have separate onboarding steps.
+
+Gym Owner Onboarding:
+- Create gym profile
+- Add gym details
+- Select subscription
+- Add trainers
+
+Trainer Onboarding:
+- Add specialization
+- Experience
+- Certifications
+- Transformation portfolio
+
+Member Onboarding:
+- Fitness goal
+- Weight
+- Height
+- InBody upload
+- Workout preference
+- Diet preference
+
+========================================
+AI PERSONALIZATION
+========================================
+
+AI recommendations should differ by role.
+
+Gym Owner:
+- Business insights
+- Retention analytics
+- Revenue optimization
+
+Trainer:
+- Client recommendations
+- Workout optimization
+- Client risk alerts
+
+Member:
+- Fitness plans
+- Diet plans
+- Workout suggestions
+- Motivation notifications
+
+========================================
+UI/UX REQUIREMENTS
+========================================
+
+Use:
+- Dynamic layouts
+- Dynamic themes
+- Role-specific colors
+- Smooth transitions
+- Premium animations
+- Responsive design
+- Mobile optimized experience
+
+The app should feel like:
+- 3 different applications inside one ecosystem.

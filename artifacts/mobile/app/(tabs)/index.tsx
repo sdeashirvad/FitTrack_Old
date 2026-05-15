@@ -196,6 +196,8 @@ export default function DashboardScreen() {
             { icon: "restaurant" as const, label: "Log Meal", color: colors.secondary, route: "/(tabs)/diet" },
             { icon: "qr-code" as const, label: "QR Check-in", color: colors.green, route: "/(tabs)/gym" },
             { icon: "analytics" as const, label: "Analytics", color: colors.purple, route: "/analytics" },
+            { icon: "calendar" as const, label: "Weekly Plan", color: "#00D4FF", route: "/workout/weekly-plan" },
+            { icon: "scan" as const, label: "InBody", color: colors.orange, route: "/inbody" },
           ].map((item) => (
             <TouchableOpacity
               key={item.label}
@@ -293,9 +295,9 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: "row", gap: 8 },
   sectionTitle: { fontSize: 17, marginVertical: 4 },
   quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  quickBtn: { width: "47%", borderRadius: 16, borderWidth: 1, padding: 16, gap: 10 },
+  quickBtn: { width: "30%", borderRadius: 16, borderWidth: 1, padding: 14, gap: 8, flexGrow: 1 },
   quickIconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  quickLabel: { fontSize: 13 },
+  quickLabel: { fontSize: 12 },
   mealRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
   mealDot: { width: 8, height: 8, borderRadius: 4 },
   mealName: { fontSize: 14 },

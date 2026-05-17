@@ -55,6 +55,14 @@ export default function LoginScreen() {
   // After any successful auth, the root index.tsx decides where to redirect
   const navigateAfterAuth = () => router.replace("/");
 
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   // ─── Google sign-in ──────────────────────────────────────────────────────────
   const handleGoogleLogin = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -64,7 +72,7 @@ export default function LoginScreen() {
       navigateAfterAuth();
     } catch (e: any) {
       if (e.message !== "Google sign-in was cancelled") {
-        Alert.alert("Google Sign-In Failed", e.message || "Please try again.");
+        showAlert("Google Sign-In Failed", e.message || "Please try again.");
       }
     } finally {
       setGoogleLoading(false);
@@ -74,11 +82,11 @@ export default function LoginScreen() {
   // ─── Email auth ───────────────────────────────────────────────────────────────
   const handleEmailAuth = async () => {
     if (!email.trim() || !password) {
-      Alert.alert("Missing Fields", "Please enter your email and password.");
+      showAlert("Missing Fields", "Please enter your email and password.");
       return;
     }
-    if (password.length < 8) {
-      Alert.alert("Weak Password", "Password must be at least 8 characters.");
+    if (authMode === "register" && password.length < 8) {
+      showAlert("Weak Password", "Password must be at least 8 characters.");
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -91,7 +99,7 @@ export default function LoginScreen() {
       }
       navigateAfterAuth();
     } catch (e: any) {
-      Alert.alert(
+      showAlert(
         authMode === "register" ? "Registration Failed" : "Login Failed",
         e.message || "Please try again.",
       );
@@ -103,7 +111,7 @@ export default function LoginScreen() {
   // ─── Phone OTP ────────────────────────────────────────────────────────────────
   const handleSendOtp = () => {
     if (!phone || phone.length < 10) {
-      Alert.alert("Invalid Number", "Enter a valid 10-digit phone number.");
+      showAlert("Invalid Number", "Enter a valid 10-digit phone number.");
       return;
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -112,7 +120,7 @@ export default function LoginScreen() {
 
   const handlePhoneLogin = async () => {
     if (!otp || otp.length < 4) {
-      Alert.alert("Invalid OTP", "Enter the OTP sent to your phone.");
+      showAlert("Invalid OTP", "Enter the OTP sent to your phone.");
       return;
     }
     setLoading(true);
@@ -120,7 +128,7 @@ export default function LoginScreen() {
       await loginWithPhone(phone, otp);
       navigateAfterAuth();
     } catch (e: any) {
-      Alert.alert("Verification Failed", e.message || "Please try again.");
+      showAlert("Verification Failed", e.message || "Please try again.");
     } finally {
       setLoading(false);
     }

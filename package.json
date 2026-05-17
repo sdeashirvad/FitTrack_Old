@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock'",
+    "preinstall": "node -e \"['package-lock.json','yarn.lock'].forEach(f=>{try{require('fs').unlinkSync(f)}catch{}})\"",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "db:push": "pnpm --filter @workspace/db run push",
     "db:push-force": "pnpm --filter @workspace/db run push-force",
@@ -17,7 +17,10 @@
   },
   "private": true,
   "devDependencies": {
+    "@esbuild/win32-x64": "^0.27.3",
     "cross-env": "^10.1.0",
+    "lightningcss": "^1.32.0",
+    "lightningcss-win32-x64-msvc": "^1.32.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2"
   }

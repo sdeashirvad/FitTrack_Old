@@ -71,19 +71,40 @@ export default function DashboardScreen() {
       >
         {/* Header */}
         <View style={styles.headerRow}>
-          <View>
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.selectionAsync();
+              router.push("/(tabs)/profile");
+            }}
+            activeOpacity={0.7}
+          >
             <Text style={[styles.greeting, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
               {greeting()},
             </Text>
             <Text style={[styles.userName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
               {user?.name?.split(" ")[0] ?? "Champ"} 💪
             </Text>
-          </View>
+          </TouchableOpacity>
           <View style={styles.headerActions}>
             <TouchableOpacity
               style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
               <Ionicons name="notifications-outline" size={22} color={colors.foreground} />
+            </TouchableOpacity>
+            {/* Avatar shortcut → Profile */}
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.selectionAsync();
+                router.push("/(tabs)/profile");
+              }}
+              style={[
+                styles.avatarBtn,
+                { backgroundColor: colors.primary + "30", borderColor: colors.primary },
+              ]}
+            >
+              <Text style={{ color: colors.primary, fontFamily: "Inter_700Bold", fontSize: 13 }}>
+                {user?.name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "U"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -271,8 +292,9 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   greeting: { fontSize: 14 },
   userName: { fontSize: 26, marginTop: 2 },
-  headerActions: { flexDirection: "row", gap: 8 },
+  headerActions: { flexDirection: "row", gap: 8, alignItems: "center" },
   iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", borderWidth: 1 },
+  avatarBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", borderWidth: 2 },
   streakCard: { padding: 16, marginBottom: 2 },
   streakInner: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   streakNum: { fontSize: 28 },

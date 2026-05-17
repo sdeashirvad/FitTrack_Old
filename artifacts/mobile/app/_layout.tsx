@@ -28,6 +28,10 @@ function RootLayoutNav() {
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen
+        name="setup"
+        options={{ animation: "slide_from_right", headerShown: false }}
+      />
+      <Stack.Screen
         name="analytics"
         options={{ animation: "slide_from_right", headerShown: false }}
       />

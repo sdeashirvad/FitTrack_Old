@@ -1,7 +1,3 @@
-import { GlassCard } from "@/components/ui/GlassCard";
-import { ProgressRing } from "@/components/ui/ProgressRing";
-import { SectionHeader } from "@/components/ui/SectionHeader";
-import { StatBadge } from "@/components/ui/StatBadge";
 import { useAuth } from "@/context/AuthContext";
 import { useFitness } from "@/context/FitnessContext";
 import { useColors } from "@/hooks/useColors";
@@ -9,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
   Platform,
   RefreshControl,
@@ -19,343 +15,259 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  withDelay,
-  useEffect as useAnimatedEffect,
-} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const QUICK_ACTIONS = [
-  { icon: "barbell" as const, label: "Log Workout", color: "#FF8A00", route: "/(tabs)/workout" },
-  { icon: "restaurant" as const, label: "Log Meal", color: "#10B981", route: "/(tabs)/diet" },
-  { icon: "scan" as const, label: "InBody", color: "#8B5CF6", route: "/inbody" },
-  { icon: "trending-up" as const, label: "Progress", color: "#06B6D4", route: "/(tabs)/progress" },
-  { icon: "analytics" as const, label: "Analysis", color: "#F59E0B", route: "/(tabs)/analysis" },
-  { icon: "calendar" as const, label: "Weekly Plan", color: "#EF4444", route: "/workout/weekly-plan" },
-];
+const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
-function AnimatedCard({ children, delay = 0, style }: { children: React.ReactNode; delay?: number; style?: any }) {
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(18);
-
-  useAnimatedEffect(() => {
-    opacity.value = withDelay(delay, withTiming(1, { duration: 400 }));
-    translateY.value = withDelay(delay, withTiming(0, { duration: 400 }));
-  });
-
-  const animStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
-  }));
-
-  return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
-}
-
-export default function DashboardScreen() {
+export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { todayLog, calorieGoal, waterGoal, streak, bmi, addWater, activitySummary } = useFitness();
-  const [refreshing, setRefreshing] = React.useState(false);
+  const { todayLog, calorieGoal, waterGoal, streak, bmi, activitySummary, weeklyCalories } = useFitness();
+  const [refreshing, setRefreshing] = useState(false);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const calorieProgress = Math.min(todayLog.calories / calorieGoal, 1);
-  const waterProgress = Math.min(todayLog.water / waterGoal, 1);
-
-  const bodyScore = Math.round(
-    ((1 - Math.abs(bmi - 22) / 22) * 35 +
-      (calorieProgress > 0.5 && calorieProgress < 1.1 ? 25 : 10) +
-      (waterProgress > 0.6 ? 20 : 8) +
-      (streak > 3 ? 20 : streak * 4)) * 1
-  );
-  const clampedScore = Math.min(Math.max(bodyScore, 30), 98);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setRefreshing(false);
-  };
-
-  const totalProtein = todayLog.meals.reduce((s, m) => s + m.protein, 0);
-  const totalCarbs = todayLog.meals.reduce((s, m) => s + m.carbs, 0);
-  const totalFat = todayLog.meals.reduce((s, m) => s + m.fat, 0);
+  const initials = user?.name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "U";
 
   const greeting = () => {
     const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 17) return "Good afternoon";
-    return "Good evening";
+    if (h < 12) return "Good Morning";
+    if (h < 17) return "Good Afternoon";
+    return "Good Evening";
+  };
+
+  const caloriesLeft = Math.max(calorieGoal - todayLog.calories, 0);
+  const maxCal = Math.max(...weeklyCalories, 2500);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await new Promise((r) => setTimeout(r, 700));
+    setRefreshing(false);
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient
-        colors={[colors.primary + "22", colors.background]}
-        style={styles.headerGrad}
-      />
-
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: topPad + 12, paddingBottom: insets.bottom + 110 },
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-          />
-        }
+        contentContainerStyle={[styles.scroll, { paddingTop: topPad + 16, paddingBottom: insets.bottom + 110 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         {/* Header */}
-        <AnimatedCard delay={0}>
-          <View style={styles.headerRow}>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={[styles.greeting, { color: colors.mutedForeground }]}>{greeting()},</Text>
+            <Text style={[styles.userName, { color: colors.foreground }]}>
+              {user?.name?.split(" ")[0] ?? "Champ"} 👋
+            </Text>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={[styles.notifBtn, { backgroundColor: colors.card, ...colors.shadow.soft }]}>
+              <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
+              <View style={[styles.notifDot, { backgroundColor: colors.primary }]} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/profile")}
+              style={[styles.avatarCircle, { backgroundColor: colors.primary }]}
+            >
+              <Text style={styles.avatarText}>{initials}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Steps Hero */}
+        <View style={[styles.heroCard, { backgroundColor: colors.card, ...colors.shadow.medium }]}>
+          <View style={styles.heroTop}>
+            <View>
+              <Text style={[styles.heroNum, { color: colors.foreground }]}>
+                {activitySummary.steps.toLocaleString()}
+              </Text>
+              <Text style={[styles.heroLabel, { color: colors.mutedForeground }]}>total steps</Text>
+            </View>
             <TouchableOpacity
               onPress={() => {
-                Haptics.selectionAsync();
-                router.push("/(tabs)/profile");
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
-              activeOpacity={0.7}
+              style={[styles.heroIcon, { backgroundColor: colors.primary }]}
             >
-              <Text style={[colors.typography.body, { color: colors.mutedForeground }]}>
-                {greeting()},
-              </Text>
-              <Text style={[colors.typography.h1, { color: colors.foreground }]}>
-                {user?.name?.split(" ")[0] ?? "Champ"} 👋
-              </Text>
+              <Ionicons name="add" size={22} color="#fff" />
             </TouchableOpacity>
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-              >
-                <Ionicons name="notifications-outline" size={22} color={colors.foreground} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  router.push("/(tabs)/profile");
-                }}
-                style={[
-                  styles.avatarBtn,
-                  { backgroundColor: colors.primary + "25", borderColor: colors.primary },
-                ]}
-              >
-                <Text style={{ color: colors.primary, fontFamily: "Inter_700Bold", fontSize: 13 }}>
-                  {user?.name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "U"}
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
-        </AnimatedCard>
+          <View style={styles.statsRow}>
+            <StatPill icon="flame" value={todayLog.calories.toString()} label="kcal" color={colors.primary} />
+            <StatPill icon="location" value={activitySummary.distance.toFixed(1)} label="kilometer" color={colors.mutedForeground} />
+            <StatPill icon="time" value={activitySummary.activeMinutes.toString()} label="minute" color={colors.cyan} />
+          </View>
+        </View>
 
-        {/* Body Score + Streak hero */}
-        <AnimatedCard delay={80}>
-          <GlassCard style={styles.heroCard} elevated shadowLevel="medium">
-            <LinearGradient
-              colors={[colors.primary + "20", colors.primaryDark + "08"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <View style={styles.heroInner}>
-              <View style={styles.heroLeft}>
-                <Text style={[colors.typography.label, { color: colors.primary }]}>BODY SCORE</Text>
-                <Text style={[colors.typography.h1, { color: colors.foreground, fontSize: 48 }]}>
-                  {clampedScore}
-                </Text>
-                <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
-                  {clampedScore >= 80 ? "Excellent shape!" : clampedScore >= 65 ? "Good progress" : "Room to grow"}
-                </Text>
-                <View style={[styles.streakPill, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "30" }]}>
-                  <Ionicons name="flame" size={14} color={colors.primary} />
-                  <Text style={[colors.typography.bodyMedium, { color: colors.primary, fontSize: 13 }]}>
-                    {streak} day streak
+        {/* Calorie Card */}
+        <View style={[styles.sectionCard, { backgroundColor: colors.card, ...colors.shadow.soft }]}>
+          <View style={styles.cardHeader}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>Calorie</Text>
+            <TouchableOpacity>
+              <Ionicons name="settings-outline" size={18} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.bigNum, { color: colors.primary }]}>
+            {todayLog.calories} <Text style={styles.bigNumUnit}>kcal</Text>
+          </Text>
+          <Text style={[styles.subLabel, { color: colors.mutedForeground }]}>
+            Burn {caloriesLeft} calorie left.
+          </Text>
+
+          {/* Mini area chart */}
+          <View style={styles.miniChart}>
+            {weeklyCalories.map((cal, i) => {
+              const h = Math.max((cal / maxCal) * 80, 6);
+              const isActive = i === 5;
+              return (
+                <View key={i} style={styles.miniBarCol}>
+                  <View
+                    style={[
+                      styles.miniBar,
+                      {
+                        height: h,
+                        backgroundColor: isActive ? colors.primary : colors.primary + "30",
+                        borderRadius: 4,
+                      },
+                    ]}
+                  />
+                  <Text style={[styles.miniBarLabel, { color: isActive ? colors.primary : colors.mutedForeground }]}>
+                    {DAYS[i]}
                   </Text>
                 </View>
-              </View>
-              <ProgressRing
-                size={120}
-                strokeWidth={10}
-                progress={clampedScore / 100}
-                color={colors.primary}
-                trackColor={colors.border}
-                label={`${clampedScore}`}
-                sublabel="/ 100"
-              />
-            </View>
-          </GlassCard>
-        </AnimatedCard>
-
-        {/* Calorie + Water rings */}
-        <AnimatedCard delay={140}>
-          <View style={styles.ringsRow}>
-            <GlassCard style={styles.ringCard}>
-              <ProgressRing
-                size={110}
-                strokeWidth={9}
-                progress={calorieProgress}
-                color={colors.primary}
-                trackColor={colors.border}
-                label={todayLog.calories.toString()}
-                sublabel={`/ ${calorieGoal}`}
-              />
-              <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>Calories</Text>
-              <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
-                {Math.max(calorieGoal - todayLog.calories, 0)} left
-              </Text>
-            </GlassCard>
-
-            <GlassCard style={styles.ringCard}>
-              <ProgressRing
-                size={110}
-                strokeWidth={9}
-                progress={waterProgress}
-                color={colors.cyan}
-                trackColor={colors.border}
-                label={`${todayLog.water}`}
-                sublabel={`/ ${waterGoal} cups`}
-              />
-              <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>Hydration</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  addWater(1);
-                }}
-                style={[styles.addWaterBtn, { backgroundColor: colors.cyan + "18", borderColor: colors.cyan + "35" }]}
-              >
-                <Ionicons name="add" size={14} color={colors.cyan} />
-                <Text style={[colors.typography.bodyMedium, { color: colors.cyan, fontSize: 12 }]}>+1 cup</Text>
-              </TouchableOpacity>
-            </GlassCard>
+              );
+            })}
           </View>
-        </AnimatedCard>
-
-        {/* Activity stats */}
-        <AnimatedCard delay={190}>
-          <View style={styles.statsRow}>
-            <StatBadge icon="walk" value={activitySummary.steps.toLocaleString()} label="Steps" color={colors.green} />
-            <StatBadge icon="body" value={`${bmi}`} label="BMI" color={colors.purple} />
-            <StatBadge
-              icon="scale"
-              value={`${todayLog.weight ?? "--"} kg`}
-              label="Weight"
-              color={colors.cyan}
-            />
-          </View>
-        </AnimatedCard>
-
-        {/* Macros */}
-        <AnimatedCard delay={230}>
-          <GlassCard style={styles.macrosCard}>
-            <SectionHeader title="Today's Macros" />
-            <View style={styles.macrosRow}>
-              <MacroItem label="Protein" value={totalProtein} unit="g" color={colors.primary} max={160} />
-              <MacroItem label="Carbs" value={totalCarbs} unit="g" color={colors.purple} max={220} />
-              <MacroItem label="Fat" value={totalFat} unit="g" color={colors.yellow} max={70} />
-            </View>
-          </GlassCard>
-        </AnimatedCard>
-
-        {/* InBody CTA Banner */}
-        <AnimatedCard delay={270}>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push("/inbody");
-            }}
-            activeOpacity={0.88}
-            style={[styles.inbodyCTA, { borderRadius: colors.radius, overflow: "hidden" }]}
-          >
-            <LinearGradient
-              colors={[colors.purple, "#6D28D9"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.inbodyCTAInner}
-            >
-              <View>
-                <Text style={[colors.typography.label, { color: "#fff9" }]}>AI POWERED</Text>
-                <Text style={[colors.typography.h3, { color: "#fff" }]}>InBody Analysis</Text>
-                <Text style={[colors.typography.caption, { color: "#fff9" }]}>
-                  Upload report → Get AI fitness plan
-                </Text>
-              </View>
-              <View style={[styles.inbodyCTAIcon, { backgroundColor: "#ffffff20" }]}>
-                <Ionicons name="scan" size={28} color="#fff" />
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </AnimatedCard>
-
-        {/* Quick Actions */}
-        <AnimatedCard delay={310}>
-          <SectionHeader title="Quick Actions" />
-          <View style={styles.quickGrid}>
-            {QUICK_ACTIONS.map((item) => (
-              <TouchableOpacity
-                key={item.label}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  router.push(item.route as any);
-                }}
-                activeOpacity={0.8}
-                style={[
-                  styles.quickBtn,
-                  { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius },
-                ]}
-              >
-                <View style={[styles.quickIconWrap, { backgroundColor: item.color + "18" }]}>
-                  <Ionicons name={item.icon} size={22} color={item.color} />
-                </View>
-                <Text style={[colors.typography.bodyMedium, { color: colors.foreground, fontSize: 12, textAlign: "center" }]}>
-                  {item.label}
-                </Text>
+          <View style={styles.periodRow}>
+            {["1d", "1w", "1m", "All"].map((p) => (
+              <TouchableOpacity key={p} style={[styles.periodBtn, p === "1w" && { backgroundColor: colors.primary }]}>
+                <Text style={[styles.periodLabel, { color: p === "1w" ? "#fff" : colors.mutedForeground }]}>{p}</Text>
               </TouchableOpacity>
             ))}
           </View>
-        </AnimatedCard>
+        </View>
 
-        {/* Recent Meals */}
-        <AnimatedCard delay={350}>
-          <SectionHeader title="Recent Meals" />
-          {todayLog.meals.slice(0, 3).map((meal, idx) => (
-            <GlassCard key={meal.id} style={[styles.mealRow, { marginBottom: idx < 2 ? 8 : 0 }]}>
-              <View style={[styles.mealDot, { backgroundColor: colors.primary }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>
-                  {meal.name}
-                </Text>
-                <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
-                  {meal.type} · {meal.time}
-                </Text>
+        {/* Featured Workout */}
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push("/(tabs)/workout");
+          }}
+          activeOpacity={0.9}
+          style={[styles.workoutHero, { ...colors.shadow.medium }]}
+        >
+          <LinearGradient
+            colors={["#1A1A2E", "#2D1B4E", "#1A1A2E"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.workoutGrad}
+          >
+            <View style={styles.workoutBadgeRow}>
+              <View style={[styles.workoutBadge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.workoutBadgeText}>25 TOTAL</Text>
               </View>
-              <Text style={[colors.typography.bodyMedium, { color: colors.primary }]}>
-                {meal.calories} kcal
-              </Text>
-            </GlassCard>
+              <TouchableOpacity style={styles.workoutSettingsBtn}>
+                <Ionicons name="settings-outline" size={16} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.workoutInfo}>
+              <Text style={styles.workoutTitle}>Back Workout</Text>
+              <Text style={styles.workoutTrainer}>With Azunyan U. Wu</Text>
+              <View style={styles.workoutStats}>
+                <WorkoutStat value="58min" label="Time" />
+                <WorkoutStat value="254kcal" label="Calorie" />
+                <WorkoutStat value="3x4" label="Sets" />
+              </View>
+              <View style={styles.workoutBtns}>
+                <TouchableOpacity style={styles.detailsBtn}>
+                  <Text style={styles.detailsBtnText}>Details</Text>
+                  <Ionicons name="document-text-outline" size={14} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                    router.push("/(tabs)/workout");
+                  }}
+                  style={[styles.startBtn, { backgroundColor: colors.primary }]}
+                >
+                  <Text style={styles.startBtnText}>Start</Text>
+                  <Ionicons name="flame" size={14} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Quick Actions */}
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quick Actions</Text>
+        <View style={styles.quickGrid}>
+          {[
+            { icon: "barbell" as const, label: "Workout", color: colors.primary, route: "/(tabs)/workout" },
+            { icon: "scan" as const, label: "InBody AI", color: colors.purple, route: "/inbody" },
+            { icon: "trending-up" as const, label: "Progress", color: colors.green, route: "/(tabs)/progress" },
+            { icon: "stats-chart" as const, label: "Analysis", color: colors.cyan, route: "/(tabs)/analysis" },
+          ].map((item) => (
+            <TouchableOpacity
+              key={item.label}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push(item.route as any);
+              }}
+              style={[styles.quickItem, { backgroundColor: colors.card, ...colors.shadow.soft }]}
+            >
+              <View style={[styles.quickIcon, { backgroundColor: item.color + "15" }]}>
+                <Ionicons name={item.icon} size={22} color={item.color} />
+              </View>
+              <Text style={[styles.quickLabel, { color: colors.foreground }]}>{item.label}</Text>
+            </TouchableOpacity>
           ))}
-        </AnimatedCard>
+        </View>
+
+        {/* Macros strip */}
+        <View style={[styles.macrosCard, { backgroundColor: colors.card, ...colors.shadow.soft }]}>
+          <Text style={[styles.cardTitle, { color: colors.foreground, marginBottom: 14 }]}>Today's Macros</Text>
+          <View style={styles.macrosRow}>
+            <MacroBar label="Protein" value={todayLog.meals.reduce((s, m) => s + m.protein, 0)} max={160} color={colors.primary} />
+            <MacroBar label="Carbs" value={todayLog.meals.reduce((s, m) => s + m.carbs, 0)} max={220} color={colors.cyan} />
+            <MacroBar label="Fat" value={todayLog.meals.reduce((s, m) => s + m.fat, 0)} max={70} color={colors.purple} />
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
 }
 
-function MacroItem({ label, value, unit, color, max }: {
-  label: string; value: number; unit: string; color: string; max: number;
-}) {
-  const colors = useColors();
-  const progress = Math.min(value / max, 1);
+function StatPill({ icon, value, label, color }: { icon: any; value: string; label: string; color: string }) {
   return (
-    <View style={{ flex: 1, gap: 6 }}>
-      <View style={styles.macroRow}>
-        <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>{label}</Text>
-        <Text style={[colors.typography.bodyMedium, { color: colors.foreground, fontSize: 13 }]}>{value}{unit}</Text>
+    <View style={styles.statPill}>
+      <View style={[styles.statPillIcon, { backgroundColor: color + "18" }]}>
+        <Ionicons name={icon} size={16} color={color} />
       </View>
-      <View style={[styles.macroTrack, { backgroundColor: colors.border }]}>
-        <View style={[styles.macroFill, { width: `${progress * 100}%` as any, backgroundColor: color }]} />
+      <Text style={[styles.statPillVal, { color: "#1C1C1E" }]}>{value}</Text>
+      <Text style={[styles.statPillLabel, { color: "#8E8E93" }]}>{label}</Text>
+    </View>
+  );
+}
+
+function WorkoutStat({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={styles.wStat}>
+      <Text style={styles.wStatVal}>{value}</Text>
+      <Text style={styles.wStatLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function MacroBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+  const pct = Math.min(value / max, 1);
+  return (
+    <View style={styles.macroBarItem}>
+      <View style={styles.macroBarTop}>
+        <Text style={styles.macroBarLabel}>{label}</Text>
+        <Text style={[styles.macroBarVal, { color }]}>{value}g</Text>
+      </View>
+      <View style={styles.macroBarTrack}>
+        <View style={[styles.macroBarFill, { width: `${pct * 100}%` as any, backgroundColor: color }]} />
       </View>
     </View>
   );
@@ -363,31 +275,72 @@ function MacroItem({ label, value, unit, color, max }: {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerGrad: { position: "absolute", top: 0, left: 0, right: 0, height: 260 },
   scroll: { paddingHorizontal: 16, gap: 14 },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
-  headerActions: { flexDirection: "row", gap: 8, alignItems: "center" },
-  iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", borderWidth: 1 },
-  avatarBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", borderWidth: 2 },
-  heroCard: { padding: 20 },
-  heroInner: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  heroLeft: { flex: 1, gap: 6 },
-  streakPill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start", marginTop: 4 },
-  ringsRow: { flexDirection: "row", gap: 12 },
-  ringCard: { flex: 1, alignItems: "center", padding: 16, gap: 8 },
-  addWaterBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
-  statsRow: { flexDirection: "row", gap: 8 },
-  macrosCard: { padding: 16 },
-  macrosRow: { gap: 12, marginTop: 12 },
-  macroRow: { flexDirection: "row", justifyContent: "space-between" },
-  macroTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
-  macroFill: { height: 6, borderRadius: 3 },
-  inbodyCTA: {},
-  inbodyCTAInner: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20 },
-  inbodyCTAIcon: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
-  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  quickBtn: { width: "30%", borderWidth: 1, padding: 14, gap: 8, flexGrow: 1, alignItems: "center" },
-  quickIconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  mealRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
-  mealDot: { width: 8, height: 8, borderRadius: 4 },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  greeting: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  userName: { fontSize: 24, fontFamily: "Inter_700Bold", letterSpacing: -0.5, marginTop: 1 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", position: "relative" },
+  notifDot: { width: 8, height: 8, borderRadius: 4, position: "absolute", top: 8, right: 8, borderWidth: 1.5, borderColor: "#F7F8FA" },
+  avatarCircle: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  avatarText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 14 },
+
+  heroCard: { backgroundColor: "#fff", borderRadius: 20, padding: 20 },
+  heroTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 },
+  heroNum: { fontSize: 42, fontFamily: "Inter_700Bold", letterSpacing: -1 },
+  heroLabel: { fontSize: 14, fontFamily: "Inter_400Regular", marginTop: 2 },
+  heroIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  statsRow: { flexDirection: "row", gap: 0 },
+  statPill: { flex: 1, alignItems: "center", gap: 4 },
+  statPillIcon: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  statPillVal: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  statPillLabel: { fontSize: 11, fontFamily: "Inter_400Regular" },
+
+  sectionCard: { backgroundColor: "#fff", borderRadius: 20, padding: 18 },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  cardTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  bigNum: { fontSize: 40, fontFamily: "Inter_700Bold", letterSpacing: -1, lineHeight: 46 },
+  bigNumUnit: { fontSize: 20, fontFamily: "Inter_500Medium" },
+  subLabel: { fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 16, marginTop: 2 },
+  miniChart: { flexDirection: "row", alignItems: "flex-end", gap: 4, height: 90, marginBottom: 14 },
+  miniBarCol: { flex: 1, alignItems: "center", gap: 6, justifyContent: "flex-end" },
+  miniBar: { width: "100%" },
+  miniBarLabel: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  periodRow: { flexDirection: "row", gap: 6 },
+  periodBtn: { flex: 1, paddingVertical: 7, borderRadius: 20, alignItems: "center", backgroundColor: "#F3F4F6" },
+  periodLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
+
+  workoutHero: { borderRadius: 20, overflow: "hidden" },
+  workoutGrad: { padding: 20 },
+  workoutBadgeRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 40 },
+  workoutBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
+  workoutBadgeText: { color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
+  workoutSettingsBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
+  workoutInfo: { gap: 8 },
+  workoutTitle: { color: "#fff", fontSize: 26, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
+  workoutTrainer: { color: "rgba(255,255,255,0.7)", fontSize: 13, fontFamily: "Inter_400Regular" },
+  workoutStats: { flexDirection: "row", gap: 24, marginVertical: 6 },
+  wStat: { alignItems: "center", gap: 2 },
+  wStatVal: { color: "#fff", fontSize: 15, fontFamily: "Inter_700Bold" },
+  wStatLabel: { color: "rgba(255,255,255,0.6)", fontSize: 11, fontFamily: "Inter_400Regular" },
+  workoutBtns: { flexDirection: "row", gap: 10, marginTop: 8 },
+  detailsBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" },
+  detailsBtnText: { color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  startBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 12 },
+  startBtnText: { color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" },
+
+  sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: -4 },
+  quickGrid: { flexDirection: "row", gap: 10 },
+  quickItem: { flex: 1, borderRadius: 16, padding: 14, alignItems: "center", gap: 8 },
+  quickIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  quickLabel: { fontSize: 12, fontFamily: "Inter_500Medium", textAlign: "center" },
+
+  macrosCard: { borderRadius: 20, padding: 18 },
+  macrosRow: { gap: 12 },
+  macroBarItem: { gap: 6 },
+  macroBarTop: { flexDirection: "row", justifyContent: "space-between" },
+  macroBarLabel: { fontSize: 13, fontFamily: "Inter_400Regular", color: "#8E8E93" },
+  macroBarVal: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  macroBarTrack: { height: 6, backgroundColor: "#F3F4F6", borderRadius: 3, overflow: "hidden" },
+  macroBarFill: { height: 6, borderRadius: 3 },
 });

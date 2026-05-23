@@ -47,6 +47,8 @@ export const users = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
 
+    username: text("username").unique(),
+
     email: text("email")
       .notNull()
       .unique(),
@@ -92,6 +94,10 @@ export const users = pgTable(
     }),
   },
   (table) => ({
+    usernameIndex: uniqueIndex("users_username_idx").on(
+      table.username,
+    ),
+
     phoneIndex: index("users_phone_idx").on(
       table.phone,
     ),

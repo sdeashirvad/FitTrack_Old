@@ -13,47 +13,42 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
-
-const slides = [
-  {
-    id: "1",
-    icon: "fitness" as const,
-    title: "Track Every Rep",
-    subtitle: "Log workouts, sets, and reps with ease. Built for serious Indian gym-goers.",
-    color: "#00D4FF",
-    gradient: ["#00D4FF15", "#070B14"] as [string, string],
-  },
-  {
-    id: "2",
-    icon: "restaurant" as const,
-    title: "Indian Diet Tracking",
-    subtitle: "500+ Indian foods pre-loaded. Dal, roti, sabzi — we've got all macros covered.",
-    color: "#FF6B35",
-    gradient: ["#FF6B3515", "#070B14"] as [string, string],
-  },
-  {
-    id: "3",
-    icon: "people" as const,
-    title: "Your Gym, Digitized",
-    subtitle: "QR attendance, membership, trainer booking — all from one app.",
-    color: "#00FF88",
-    gradient: ["#00FF8815", "#070B14"] as [string, string],
-  },
-];
 
 export default function OnboardingScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
+
+  const slides = [
+    {
+      id: "1",
+      icon: "fitness" as const,
+      title: "Track Every Rep",
+      subtitle: "Log workouts, sets, and reps with ease. Built for serious Indian gym-goers.",
+      color: colors.primary,
+      gradient: [colors.primary + "15", colors.background] as [string, string],
+    },
+    {
+      id: "2",
+      icon: "restaurant" as const,
+      title: "Indian Diet Tracking",
+      subtitle: "500+ Indian foods pre-loaded. Dal, roti, sabzi — we've got all macros covered.",
+      color: colors.primaryDark,
+      gradient: [colors.primaryDark + "15", colors.background] as [string, string],
+    },
+    {
+      id: "3",
+      icon: "people" as const,
+      title: "Your Gym, Digitized",
+      subtitle: "QR attendance, membership, trainer booking — all from one app.",
+      color: colors.green,
+      gradient: [colors.green + "15", colors.background] as [string, string],
+    },
+  ];
 
   const handleNext = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -69,7 +64,7 @@ export default function OnboardingScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   return (
-    <View style={[styles.container, { backgroundColor: "#070B14" }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         ref={flatListRef}
         data={slides}
@@ -88,10 +83,10 @@ export default function OnboardingScreen() {
               <View style={[styles.iconCircle, { backgroundColor: item.color + "20", borderColor: item.color + "40" }]}>
                 <Ionicons name={item.icon} size={56} color={item.color} />
               </View>
-              <Text style={[styles.title, { color: "#FFFFFF", fontFamily: "Inter_700Bold" }]}>
+              <Text style={[styles.title, { color: colors.foreground }]}>
                 {item.title}
               </Text>
-              <Text style={[styles.subtitle, { color: "#8B92A5", fontFamily: "Inter_400Regular" }]}>
+              <Text style={[styles.subtitle, { color: colors.secondary }]}>
                 {item.subtitle}
               </Text>
             </View>
@@ -108,7 +103,7 @@ export default function OnboardingScreen() {
                 styles.dot,
                 {
                   backgroundColor:
-                    i === activeIndex ? slides[activeIndex].color : "#1A2540",
+                    i === activeIndex ? slides[activeIndex].color : colors.border,
                   width: i === activeIndex ? 24 : 8,
                 },
               ]}
@@ -121,17 +116,17 @@ export default function OnboardingScreen() {
           activeOpacity={0.85}
           style={[
             styles.nextBtn,
-            { backgroundColor: slides[activeIndex].color },
+            { backgroundColor: slides[activeIndex].color, borderRadius: colors.radiusLarge },
           ]}
         >
-          <Text style={[styles.nextText, { fontFamily: "Inter_700Bold", color: "#070B14" }]}>
+          <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>
             {activeIndex === slides.length - 1 ? "Get Started" : "Next"}
           </Text>
-          <Ionicons name="arrow-forward" size={20} color="#070B14" />
+          <Ionicons name="arrow-forward" size={20} color={colors.primaryForeground} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.replace("/(auth)/login")} style={styles.skip}>
-          <Text style={[styles.skipText, { color: "#8B92A5", fontFamily: "Inter_400Regular" }]}>
+          <Text style={[colors.typography.body, { color: colors.secondary }]}>
             Skip
           </Text>
         </TouchableOpacity>
@@ -162,11 +157,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 16,
     lineHeight: 40,
+    fontFamily: "Inter_700Bold",
   },
   subtitle: {
     fontSize: 16,
     textAlign: "center",
     lineHeight: 26,
+    fontFamily: "Inter_400Regular",
   },
   bottom: {
     paddingHorizontal: 24,
@@ -188,16 +185,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     height: 56,
-    borderRadius: 28,
     width: "100%",
-  },
-  nextText: {
-    fontSize: 17,
   },
   skip: {
     padding: 8,
-  },
-  skipText: {
-    fontSize: 14,
   },
 });

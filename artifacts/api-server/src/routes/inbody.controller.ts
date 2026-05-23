@@ -1,7 +1,7 @@
 /**
  * InBody Controller
  * -----------------
- * Handles the full upload → OCR → persist → respond pipeline.
+ * Handles the full upload → OCR → Gemini AI → persist → respond pipeline.
  */
 
 import type { Request, Response } from "express";
@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { uploadToStorage, runOCR } from "../lib/inbody-ocr";
 import { isValidExtraction } from "../lib/inbody-parser";
+import { analyzeWithGemini, type GeminiAnalysis } from "../lib/gemini";
 import type { AuthenticatedRequest } from "../lib/auth";
 
 // ─── POST /api/inbody/upload ──────────────────────────────────────────────────
@@ -107,7 +108,16 @@ export async function uploadInbodyReport(req: AuthenticatedRequest, res: Respons
   // ── Validate extraction ──────────────────────────────────────────────────────
   if (!isValidExtraction(extractedMetrics)) {
     logger.warn({ reportId, metricCount: Object.keys(extractedMetrics).length }, "Low-quality extraction");
-    // Don't fail — still save what we have, just warn
+  }
+
+  // ── Run Gemini AI Analysis ───────────────────────────────────────────────────
+  let geminiAnalysis: GeminiAnalysis | null = null;
+  try {
+    logger.info({ reportId }, "Starting Gemini AI analysis");
+    geminiAnalysis = await analyzeWithGemini(extractedMetrics);
+    logger.info({ reportId }, "Gemini AI analysis complete");
+  } catch (err: any) {
+    logger.warn({ err: err.message, reportId }, "Gemini analysis failed — continuing without it");
   }
 
   // ── Persist results ──────────────────────────────────────────────────────────
@@ -124,17 +134,60 @@ export async function uploadInbodyReport(req: AuthenticatedRequest, res: Respons
       .where(eq(inbodyReports.id, reportId));
   } catch (err) {
     logger.error({ err, reportId }, "Failed to persist OCR results");
-    // Non-fatal — we already have the data, return it anyway
   }
 
-  logger.info({ userId, reportId }, "InBody report processed successfully");
+  logger.info({ userId, reportId, hasGemini: !!geminiAnalysis }, "InBody report processed successfully");
 
   return res.status(201).json({
     success: true,
     reportId,
     extractedMetrics,
     extractedText: rawText,
+    geminiAnalysis,
   });
+}
+
+// ─── POST /api/inbody/analyze/:reportId ───────────────────────────────────────
+export async function analyzeInbodyReport(req: AuthenticatedRequest, res: Response) {
+  const userId = req.auth!.sub;
+  const { reportId } = req.params;
+
+  // Fetch the report
+  const [report] = await db
+    .select()
+    .from(inbodyReports)
+    .where(eq(inbodyReports.id, reportId))
+    .limit(1);
+
+  if (!report) {
+    return res.status(404).json({ success: false, error: "Report not found." });
+  }
+
+  if (report.userId !== userId) {
+    return res.status(403).json({ success: false, error: "Access denied." });
+  }
+
+  if (!report.extractedMetrics) {
+    return res.status(400).json({ success: false, error: "No extracted metrics available. Upload a report first." });
+  }
+
+  const metrics = report.extractedMetrics as Record<string, string>;
+
+  // Run Gemini analysis
+  try {
+    logger.info({ reportId, userId }, "Starting Gemini AI analysis");
+    const analysis = await analyzeWithGemini(metrics);
+    logger.info({ reportId }, "Gemini AI analysis complete");
+
+    return res.json({
+      success: true,
+      reportId,
+      analysis,
+    });
+  } catch (err: any) {
+    logger.error({ err: err.message, reportId }, "Gemini analysis failed");
+    return res.status(502).json({ success: false, error: "AI analysis failed. Please try again." });
+  }
 }
 
 // ─── GET /api/inbody/reports ──────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import { useAuth } from "@/context/AuthContext";
+import { useColors } from "@/hooks/useColors";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
@@ -35,10 +36,12 @@ const ROLES: {
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
   const { login, register, loginWithPhone, loginWithGoogle } = useAuth();
 
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [inputMode, setInputMode] = useState<InputMode>("email");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
@@ -52,7 +55,6 @@ export default function LoginScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  // After any successful auth, the root index.tsx decides where to redirect
   const navigateAfterAuth = () => router.replace("/");
 
   const showAlert = (title: string, message: string) => {
@@ -63,7 +65,6 @@ export default function LoginScreen() {
     }
   };
 
-  // ─── Google sign-in ──────────────────────────────────────────────────────────
   const handleGoogleLogin = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setGoogleLoading(true);
@@ -79,9 +80,12 @@ export default function LoginScreen() {
     }
   };
 
-  // ─── Email auth ───────────────────────────────────────────────────────────────
   const handleEmailAuth = async () => {
-    if (!email.trim() || !password) {
+    if (authMode === "register" && (!username.trim() || !email.trim() || !password)) {
+      showAlert("Missing Fields", "Please enter a username, email, and password.");
+      return;
+    }
+    if (authMode === "login" && (!email.trim() || !password)) {
       showAlert("Missing Fields", "Please enter your email and password.");
       return;
     }
@@ -93,7 +97,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       if (authMode === "register") {
-        await register(email.trim(), password, selectedRole);
+        await register(email.trim(), username.trim(), password, selectedRole);
       } else {
         await login(email.trim(), password);
       }
@@ -108,7 +112,6 @@ export default function LoginScreen() {
     }
   };
 
-  // ─── Phone OTP ────────────────────────────────────────────────────────────────
   const handleSendOtp = () => {
     if (!phone || phone.length < 10) {
       showAlert("Invalid Number", "Enter a valid 10-digit phone number.");
@@ -135,12 +138,11 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient
-        colors={["#00D4FF12", "#070B14"]}
+        colors={[colors.primary + "15", colors.background]}
         style={StyleSheet.absoluteFillObject}
       />
-
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -155,15 +157,15 @@ export default function LoginScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.logo, styles.fontBold]}>FitTrack</Text>
-            <Text style={[styles.tagline, styles.fontRegular]}>
+            <Text style={[colors.typography.h1, { color: colors.primary, fontSize: 38, letterSpacing: -1 }]}>FitTrack</Text>
+            <Text style={[colors.typography.body, { color: colors.mutedForeground, marginTop: 6 }]}>
               Your gym. Your goals. Your app.
             </Text>
           </View>
 
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radiusLarge }]}>
             {/* Login / Register toggle */}
-            <View style={styles.tabRow}>
+            <View style={[styles.tabRow, { backgroundColor: colors.input, borderRadius: colors.radiusSmall }]}>
               {(["login", "register"] as AuthMode[]).map((m) => (
                 <TouchableOpacity
                   key={m}
@@ -171,12 +173,16 @@ export default function LoginScreen() {
                     setAuthMode(m);
                     Haptics.selectionAsync();
                   }}
-                  style={[styles.tab, authMode === m && styles.tabActive]}
+                  style={[
+                    styles.tab,
+                    { borderRadius: 10 },
+                    authMode === m && { backgroundColor: colors.primary },
+                  ]}
                 >
                   <Text
                     style={[
-                      styles.tabTxt,
-                      authMode === m ? styles.tabTxtActive : styles.fontRegular,
+                      colors.typography.body,
+                      { color: authMode === m ? colors.primaryForeground : colors.mutedForeground },
                     ]}
                   >
                     {m === "login" ? "Sign In" : "Create Account"}
@@ -190,10 +196,10 @@ export default function LoginScreen() {
               onPress={handleGoogleLogin}
               disabled={googleLoading}
               activeOpacity={0.85}
-              style={[styles.googleBtn, googleLoading && { opacity: 0.7 }]}
+              style={[styles.googleBtn, { borderColor: colors.border, borderRadius: colors.radius }, googleLoading && { opacity: 0.7 }]}
             >
               {googleLoading ? (
-                <ActivityIndicator color="#1A1A2E" size="small" />
+                <ActivityIndicator color={colors.foreground} size="small" />
               ) : (
                 <>
                   <Image
@@ -202,8 +208,7 @@ export default function LoginScreen() {
                     }}
                     style={styles.googleIcon}
                   />
-
-                  <Text style={[styles.googleBtnTxt, styles.fontSemiBold]}>
+                  <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>
                     Continue with Google
                   </Text>
                 </>
@@ -212,15 +217,15 @@ export default function LoginScreen() {
 
             {/* Divider */}
             <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={[styles.dividerTxt, styles.fontRegular]}>or</Text>
-              <View style={styles.dividerLine} />
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>or</Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
             {/* Role selector (only for register) */}
             {authMode === "register" && (
               <>
-                <Text style={[styles.sectionLabel, styles.fontMedium]}>
+                <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>
                   I am a
                 </Text>
                 <View style={styles.roleRow}>
@@ -233,18 +238,19 @@ export default function LoginScreen() {
                       }}
                       style={[
                         styles.roleBtn,
-                        selectedRole === r.key && styles.roleBtnActive,
+                        { backgroundColor: colors.input, borderColor: colors.border, borderRadius: 10 },
+                        selectedRole === r.key && { backgroundColor: colors.primary + "15", borderColor: colors.primary },
                       ]}
                     >
                       <Ionicons
                         name={r.icon}
                         size={18}
-                        color={selectedRole === r.key ? "#00D4FF" : "#8B92A5"}
+                        color={selectedRole === r.key ? colors.cyan : colors.mutedForeground}
                       />
                       <Text
                         style={[
-                          styles.roleTxt,
-                          selectedRole === r.key && styles.roleTxtActive,
+                          colors.typography.caption,
+                          { color: selectedRole === r.key ? colors.primary : colors.mutedForeground },
                         ]}
                       >
                         {r.label}
@@ -256,7 +262,7 @@ export default function LoginScreen() {
             )}
 
             {/* Input mode: Email / Phone */}
-            <View style={styles.modeSwitch}>
+            <View style={[styles.modeSwitch, { backgroundColor: colors.input, borderRadius: colors.radiusSmall }]}>
               {(["email", "phone"] as InputMode[]).map((m) => (
                 <TouchableOpacity
                   key={m}
@@ -266,15 +272,14 @@ export default function LoginScreen() {
                   }}
                   style={[
                     styles.modeBtn,
-                    inputMode === m && styles.modeBtnActive,
+                    { borderRadius: 10 },
+                    inputMode === m && { backgroundColor: colors.card },
                   ]}
                 >
                   <Text
                     style={[
-                      styles.modeTxt,
-                      inputMode === m
-                        ? styles.modeTxtActive
-                        : styles.fontRegular,
+                      colors.typography.body,
+                      { color: inputMode === m ? colors.foreground : colors.mutedForeground },
                     ]}
                   >
                     {m === "email" ? "Email" : "Phone OTP"}
@@ -286,46 +291,47 @@ export default function LoginScreen() {
             {/* Email form */}
             {inputMode === "email" ? (
               <View style={styles.form}>
-                <View style={styles.inputWrap}>
-                  <Ionicons name="mail-outline" size={18} color="#8B92A5" />
+                {authMode === "register" && (
+                  <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.input, borderRadius: colors.radiusSmall }]}>
+                    <Ionicons name="person-outline" size={18} color={colors.mutedForeground} />
+                    <TextInput
+                      value={username}
+                      onChangeText={setUsername}
+                      placeholder="Username"
+                      placeholderTextColor={colors.mutedForeground}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      style={[styles.input, colors.typography.body, { color: colors.foreground }]}
+                    />
+                  </View>
+                )}
+
+                <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.input, borderRadius: colors.radiusSmall }]}>
+                  <Ionicons name="mail-outline" size={18} color={colors.mutedForeground} />
                   <TextInput
                     value={email}
                     onChangeText={setEmail}
                     placeholder="Email address"
-                    placeholderTextColor="#8B92A5"
+                    placeholderTextColor={colors.mutedForeground}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
-                    style={[styles.input, styles.fontRegular]}
+                    style={[styles.input, colors.typography.body, { color: colors.foreground }]}
                   />
                 </View>
 
-                <View style={styles.inputWrap}>
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={18}
-                    color="#8B92A5"
-                  />
+                <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.input, borderRadius: colors.radiusSmall }]}>
+                  <Ionicons name="lock-closed-outline" size={18} color={colors.mutedForeground} />
                   <TextInput
                     value={password}
                     onChangeText={setPassword}
-                    placeholder={
-                      authMode === "register"
-                        ? "Create password (min. 8 chars)"
-                        : "Password"
-                    }
-                    placeholderTextColor="#8B92A5"
+                    placeholder={authMode === "register" ? "Create password (min. 8 chars)" : "Password"}
+                    placeholderTextColor={colors.mutedForeground}
                     secureTextEntry={!showPassword}
-                    style={[styles.input, styles.fontRegular]}
+                    style={[styles.input, colors.typography.body, { color: colors.foreground }]}
                   />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                  >
-                    <Ionicons
-                      name={showPassword ? "eye-off-outline" : "eye-outline"}
-                      size={18}
-                      color="#8B92A5"
-                    />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={18} color={colors.mutedForeground} />
                   </TouchableOpacity>
                 </View>
 
@@ -333,12 +339,12 @@ export default function LoginScreen() {
                   onPress={handleEmailAuth}
                   disabled={loading}
                   activeOpacity={0.85}
-                  style={[styles.primaryBtn, loading && { opacity: 0.7 }]}
+                  style={[styles.primaryBtn, { backgroundColor: colors.primary, borderRadius: colors.radiusSmall }, loading && { opacity: 0.7 }]}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#070B14" />
+                    <ActivityIndicator color={colors.primaryForeground} />
                   ) : (
-                    <Text style={[styles.primaryBtnTxt, styles.fontBold]}>
+                    <Text style={[colors.typography.bodyMedium, { color: colors.primaryForeground, fontSize: 16 }]}>
                       {authMode === "register" ? "Create Account" : "Sign In"}
                     </Text>
                   )}
@@ -347,18 +353,16 @@ export default function LoginScreen() {
             ) : (
               /* Phone OTP form */
               <View style={styles.form}>
-                <View style={styles.inputWrap}>
-                  <Text style={[styles.countryCode, styles.fontMedium]}>
-                    +91
-                  </Text>
+                <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.input, borderRadius: colors.radiusSmall }]}>
+                  <Text style={[colors.typography.bodyMedium, { color: colors.mutedForeground }]}>+91</Text>
                   <TextInput
                     value={phone}
                     onChangeText={setPhone}
                     placeholder="10-digit phone number"
-                    placeholderTextColor="#8B92A5"
+                    placeholderTextColor={colors.mutedForeground}
                     keyboardType="phone-pad"
                     maxLength={10}
-                    style={[styles.input, styles.fontRegular]}
+                    style={[styles.input, colors.typography.body, { color: colors.foreground }]}
                   />
                 </View>
 
@@ -366,38 +370,36 @@ export default function LoginScreen() {
                   <TouchableOpacity
                     onPress={handleSendOtp}
                     activeOpacity={0.85}
-                    style={styles.primaryBtn}
+                    style={[styles.primaryBtn, { backgroundColor: colors.primary, borderRadius: colors.radiusSmall }]}
                   >
-                    <Text style={[styles.primaryBtnTxt, styles.fontBold]}>
+                    <Text style={[colors.typography.bodyMedium, { color: colors.primaryForeground, fontSize: 16 }]}>
                       Send OTP
                     </Text>
                   </TouchableOpacity>
                 ) : (
                   <>
-                    <View
-                      style={[styles.inputWrap, { borderColor: "#00D4FF50" }]}
-                    >
-                      <Ionicons name="key-outline" size={18} color="#00D4FF" />
+                    <View style={[styles.inputWrap, { borderColor: colors.cyan + "50", backgroundColor: colors.input, borderRadius: colors.radiusSmall }]}>
+                      <Ionicons name="key-outline" size={18} color={colors.cyan} />
                       <TextInput
                         value={otp}
                         onChangeText={setOtp}
                         placeholder="Enter OTP"
-                        placeholderTextColor="#8B92A5"
+                        placeholderTextColor={colors.mutedForeground}
                         keyboardType="number-pad"
                         maxLength={6}
-                        style={[styles.input, styles.fontRegular]}
+                        style={[styles.input, colors.typography.body, { color: colors.foreground }]}
                       />
                     </View>
                     <TouchableOpacity
                       onPress={handlePhoneLogin}
                       disabled={loading}
                       activeOpacity={0.85}
-                      style={[styles.primaryBtn, loading && { opacity: 0.7 }]}
+                      style={[styles.primaryBtn, { backgroundColor: colors.primary, borderRadius: colors.radiusSmall }, loading && { opacity: 0.7 }]}
                     >
                       {loading ? (
-                        <ActivityIndicator color="#070B14" />
+                        <ActivityIndicator color={colors.primaryForeground} />
                       ) : (
-                        <Text style={[styles.primaryBtnTxt, styles.fontBold]}>
+                        <Text style={[colors.typography.bodyMedium, { color: colors.primaryForeground, fontSize: 16 }]}>
                           Verify & Sign In
                         </Text>
                       )}
@@ -408,7 +410,7 @@ export default function LoginScreen() {
             )}
           </View>
 
-          <Text style={[styles.terms, styles.fontRegular]}>
+          <Text style={[colors.typography.caption, { color: colors.mutedForeground, textAlign: "center" }]}>
             By continuing, you agree to our Terms of Service & Privacy Policy
           </Text>
         </ScrollView>
@@ -417,152 +419,23 @@ export default function LoginScreen() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-const C = {
-  bg: "#070B14",
-  card: "#0F1729",
-  border: "#1A2540",
-  input: "#141E33",
-  primary: "#00D4FF",
-  muted: "#8B92A5",
-  fg: "#FFFFFF",
-  google: "#FFFFFF",
-};
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
+  container: { flex: 1 },
   scroll: { paddingHorizontal: 20, flexGrow: 1 },
-
-  // Typography
-  fontBold: { fontFamily: "Inter_700Bold" },
-  fontSemiBold: { fontFamily: "Inter_600SemiBold" },
-  fontMedium: { fontFamily: "Inter_500Medium" },
-  fontRegular: { fontFamily: "Inter_400Regular" },
-
-  // Header
   header: { alignItems: "center", marginBottom: 28 },
-  logo: { fontSize: 38, color: C.primary, letterSpacing: -1 },
-  tagline: { fontSize: 15, color: C.muted, marginTop: 6 },
-
-  // Card
-  card: {
-    backgroundColor: C.card,
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-    gap: 14,
-    marginBottom: 20,
-  },
-
-  // Auth mode tabs (Sign In / Create Account)
-  tabRow: {
-    flexDirection: "row",
-    backgroundColor: "#141E33",
-    borderRadius: 12,
-    padding: 4,
-  },
-  tab: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center" },
-  tabActive: { backgroundColor: C.primary },
-  tabTxt: { fontSize: 14, color: C.muted },
-  tabTxtActive: { fontFamily: "Inter_600SemiBold", color: C.bg, fontSize: 14 },
-
-  // Google button
-  googleBtn: {
-  height: 56,
-  backgroundColor: "#FFFFFF",
-  borderRadius: 16,
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  borderWidth: 1,
-  borderColor: "#E5E7EB",
-  gap: 12,
-  marginTop: 16,
-},
-
-googleIcon: {
-  width: 22,
-  height: 22,
-},
-
-googleBtnTxt: {
-  fontSize: 16,
-  color: "#1A1A2E",
-},
-
-  // Divider
+  card: { padding: 20, borderWidth: 1, gap: 14, marginBottom: 20 },
+  tabRow: { flexDirection: "row", padding: 4 },
+  tab: { flex: 1, paddingVertical: 10, alignItems: "center" },
+  googleBtn: { height: 56, flexDirection: "row", alignItems: "center", justifyContent: "center", borderWidth: 1, gap: 12, marginTop: 16 },
+  googleIcon: { width: 22, height: 22 },
   divider: { flexDirection: "row", alignItems: "center", gap: 10 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: C.border },
-  dividerTxt: { color: C.muted, fontSize: 13 },
-
-  // Role selector
-  sectionLabel: {
-    fontSize: 12,
-    color: C.muted,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-  },
+  dividerLine: { flex: 1, height: 1 },
   roleRow: { flexDirection: "row", gap: 8 },
-  roleBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    backgroundColor: "#141E33",
-    borderColor: C.border,
-  },
-  roleBtnActive: { backgroundColor: "#00D4FF15", borderColor: C.primary },
-  roleTxt: { fontSize: 13, color: C.muted, fontFamily: "Inter_400Regular" },
-  roleTxtActive: { color: C.primary, fontFamily: "Inter_600SemiBold" },
-
-  // Input mode (Email / Phone)
-  modeSwitch: {
-    flexDirection: "row",
-    backgroundColor: "#141E33",
-    borderRadius: 12,
-    padding: 4,
-  },
-  modeBtn: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  modeBtnActive: { backgroundColor: "#1A2540" },
-  modeTxt: { fontSize: 14, color: C.muted },
-  modeTxtActive: { fontFamily: "Inter_600SemiBold", color: C.fg, fontSize: 14 },
-
-  // Form
+  roleBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: 10, borderWidth: 1 },
+  modeSwitch: { flexDirection: "row", padding: 4 },
+  modeBtn: { flex: 1, paddingVertical: 9, alignItems: "center" },
   form: { gap: 12 },
-  inputWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 52,
-    borderColor: C.border,
-    backgroundColor: "#141E33",
-  },
-  input: { flex: 1, fontSize: 15, color: C.fg },
-  countryCode: { fontSize: 15, color: C.muted },
-
-  // Buttons
-  primaryBtn: {
-    height: 52,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: C.primary,
-  },
-  primaryBtnTxt: { fontSize: 16, color: C.bg },
-
-  // Terms
-  terms: { textAlign: "center", fontSize: 12, color: C.muted, lineHeight: 18 },
+  inputWrap: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, paddingHorizontal: 14, height: 52 },
+  input: { flex: 1, fontSize: 15 },
+  primaryBtn: { height: 52, alignItems: "center", justifyContent: "center" },
 });

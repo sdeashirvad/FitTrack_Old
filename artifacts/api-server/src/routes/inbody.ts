@@ -2,9 +2,10 @@
  * InBody Routes
  * -------------
  * Mounts:
- *   POST   /api/inbody/upload         — Upload + OCR a report
- *   GET    /api/inbody/reports         — List user's reports
- *   GET    /api/inbody/reports/:id     — Get a single report
+ *   POST   /api/inbody/upload              — Upload + OCR + Gemini AI a report
+ *   POST   /api/inbody/analyze/:reportId   — Run Gemini AI on existing report
+ *   GET    /api/inbody/reports              — List user's reports
+ *   GET    /api/inbody/reports/:id          — Get a single report
  */
 
 import { Router } from "express";
@@ -12,6 +13,7 @@ import multer from "multer";
 import { requireAuth } from "../lib/auth";
 import {
   uploadInbodyReport,
+  analyzeInbodyReport,
   listInbodyReports,
   getInbodyReport,
 } from "./inbody.controller";
@@ -46,6 +48,8 @@ router.post(
   upload.single("report"),
   uploadInbodyReport,
 );
+
+router.post("/inbody/analyze/:reportId", requireAuth, analyzeInbodyReport);
 
 router.get("/inbody/reports", requireAuth, listInbodyReports);
 

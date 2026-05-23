@@ -1,4 +1,5 @@
 import { GlassCard } from "@/components/ui/GlassCard";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,7 +16,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Rect, Path } from "react-native-svg";
+import Svg, { Rect } from "react-native-svg";
 
 const MEMBERSHIP_PLANS = [
   { name: "Monthly", price: "₹999", duration: "1 Month", popular: false },
@@ -83,7 +84,7 @@ export default function GymScreen() {
           { paddingTop: topPad + 12, paddingBottom: insets.bottom + 100 },
         ]}
       >
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+        <Text style={[colors.typography.h1, { color: colors.foreground }]}>
           {ownerRole ? "Gym Dashboard" : trainerRole ? "Trainer Panel" : "My Gym"}
         </Text>
 
@@ -98,27 +99,27 @@ export default function GymScreen() {
             />
             <View style={styles.membershipInner}>
               <View>
-                <Text style={[styles.membershipGym, { fontFamily: "Inter_700Bold", color: "#FFFFFF" }]}>
+                <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>
                   {user?.gymName}
                 </Text>
-                <Text style={[styles.membershipName, { fontFamily: "Inter_400Regular", color: "#FFFFFF99" }]}>
+                <Text style={[colors.typography.caption, { color: colors.primaryForeground + "99" }]}>
                   {user?.name}
                 </Text>
                 <View style={styles.membershipBadge}>
-                  <Ionicons name="checkmark-circle" size={14} color="#00FF88" />
-                  <Text style={[styles.membershipStatus, { fontFamily: "Inter_600SemiBold", color: "#00FF88" }]}>
+                  <Ionicons name="checkmark-circle" size={14} color={colors.green} />
+                  <Text style={[colors.typography.bodyMedium, { color: colors.green, fontSize: 13 }]}>
                     Active Member
                   </Text>
                 </View>
               </View>
               <View style={styles.membershipRight}>
-                <Text style={[styles.membershipSince, { fontFamily: "Inter_400Regular", color: "#FFFFFF80" }]}>
+                <Text style={[colors.typography.tiny, { color: colors.primaryForeground + "80" }]}>
                   Member since
                 </Text>
-                <Text style={[styles.membershipDate, { fontFamily: "Inter_700Bold", color: "#FFFFFF" }]}>
+                <Text style={[colors.typography.bodyMedium, { color: colors.primaryForeground }]}>
                   {user?.memberSince}
                 </Text>
-                <Text style={[styles.membershipExpiry, { fontFamily: "Inter_400Regular", color: "#FFFFFF60" }]}>
+                <Text style={[colors.typography.tiny, { color: colors.primaryForeground + "60" }]}>
                   Expires: Jan 2025
                 </Text>
               </View>
@@ -131,19 +132,17 @@ export default function GymScreen() {
           <GlassCard style={styles.qrCard}>
             <View style={styles.qrHeader}>
               <View>
-                <Text style={[styles.qrTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                <Text style={[colors.typography.h3, { color: colors.foreground }]}>
                   QR Check-in
                 </Text>
-                <Text style={[styles.qrSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
                   {checkedIn ? "You're checked in today!" : "Scan at gym entrance"}
                 </Text>
               </View>
               {checkedIn && (
                 <View style={[styles.checkedBadge, { backgroundColor: colors.green + "20" }]}>
                   <Ionicons name="checkmark-circle" size={20} color={colors.green} />
-                  <Text style={[styles.checkedTxt, { color: colors.green, fontFamily: "Inter_600SemiBold" }]}>
-                    In
-                  </Text>
+                  <Text style={[colors.typography.bodyMedium, { color: colors.green }]}>In</Text>
                 </View>
               )}
             </View>
@@ -155,8 +154,8 @@ export default function GymScreen() {
                   onPress={handleCheckIn}
                   style={[styles.scanBtn, { backgroundColor: colors.green }]}
                 >
-                  <Ionicons name="qr-code-outline" size={20} color="#FFFFFF" />
-                  <Text style={[styles.scanBtnTxt, { fontFamily: "Inter_700Bold" }]}>
+                  <Ionicons name="qr-code-outline" size={20} color={colors.primaryForeground} />
+                  <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>
                     Mark Attendance
                   </Text>
                 </TouchableOpacity>
@@ -164,7 +163,7 @@ export default function GymScreen() {
             ) : (
               <View style={[styles.checkedInBanner, { backgroundColor: colors.green + "15" }]}>
                 <Ionicons name="time" size={20} color={colors.green} />
-                <Text style={[styles.checkedInTxt, { color: colors.green, fontFamily: "Inter_500Medium" }]}>
+                <Text style={[colors.typography.bodyMedium, { color: colors.green }]}>
                   Checked in at {new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
                 </Text>
               </View>
@@ -175,9 +174,7 @@ export default function GymScreen() {
         {/* Slot booking */}
         {memberRole && (
           <GlassCard style={styles.slotCard}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-              Book a Slot
-            </Text>
+            <SectionHeader title="Book a Slot" />
             <View style={styles.slotsGrid}>
               {SLOTS.map((slot) => (
                 <TouchableOpacity
@@ -200,37 +197,33 @@ export default function GymScreen() {
                       borderColor:
                         selectedSlot === slot.time
                           ? colors.primary
-                          : !slot.available
-                            ? colors.border
-                            : colors.border,
+                          : colors.border,
                       opacity: slot.available ? 1 : 0.5,
+                      borderRadius: colors.radiusSmall,
                     },
                   ]}
                 >
                   <Text
                     style={[
-                      styles.slotTime,
+                      colors.typography.caption,
                       {
                         color: selectedSlot === slot.time ? colors.primary : slot.available ? colors.foreground : colors.mutedForeground,
-                        fontFamily: selectedSlot === slot.time ? "Inter_600SemiBold" : "Inter_400Regular",
                       },
                     ]}
                   >
                     {slot.time}
                   </Text>
                   {!slot.available && (
-                    <Text style={[styles.slotFull, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                      Full
-                    </Text>
+                    <Text style={[colors.typography.tiny, { color: colors.mutedForeground }]}>Full</Text>
                   )}
                 </TouchableOpacity>
               ))}
             </View>
             <TouchableOpacity
               onPress={handleBookSlot}
-              style={[styles.bookBtn, { backgroundColor: colors.primary, opacity: selectedSlot ? 1 : 0.5 }]}
+              style={[styles.bookBtn, { backgroundColor: colors.primary, opacity: selectedSlot ? 1 : 0.5, borderRadius: colors.radiusSmall }]}
             >
-              <Text style={[styles.bookBtnTxt, { color: colors.primaryForeground, fontFamily: "Inter_700Bold" }]}>
+              <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>
                 {selectedSlot ? `Confirm ${selectedSlot} Slot` : "Select a Slot"}
               </Text>
             </TouchableOpacity>
@@ -240,26 +233,18 @@ export default function GymScreen() {
         {/* Trainer booking */}
         {memberRole && (
           <View>
-            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-              Book a Trainer
-            </Text>
+            <SectionHeader title="Book a Trainer" />
             {TRAINERS.map((t) => (
               <GlassCard key={t.name} style={styles.trainerCard}>
                 <View style={[styles.trainerAvatar, { backgroundColor: colors.primary + "20" }]}>
-                  <Text style={[styles.trainerAvatarTxt, { color: colors.primary, fontFamily: "Inter_700Bold" }]}>
-                    {t.avatar}
-                  </Text>
+                  <Text style={[colors.typography.h3, { color: colors.primary }]}>{t.avatar}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.trainerName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-                    {t.name}
-                  </Text>
-                  <Text style={[styles.trainerSpec, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    {t.specialty}
-                  </Text>
+                  <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>{t.name}</Text>
+                  <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>{t.specialty}</Text>
                   <View style={styles.trainerMeta}>
                     <Ionicons name="star" size={12} color={colors.yellow} />
-                    <Text style={[styles.trainerMetaTxt, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                    <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
                       {t.rating} · {t.sessions} sessions
                     </Text>
                   </View>
@@ -271,9 +256,7 @@ export default function GymScreen() {
                   }}
                   style={[styles.bookTrainerBtn, { backgroundColor: colors.primary + "20", borderColor: colors.primary + "40" }]}
                 >
-                  <Text style={[styles.bookTrainerTxt, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>
-                    Book
-                  </Text>
+                  <Text style={[colors.typography.bodyMedium, { color: colors.primary }]}>Book</Text>
                 </TouchableOpacity>
               </GlassCard>
             ))}
@@ -282,9 +265,7 @@ export default function GymScreen() {
 
         {/* Membership plans */}
         <View>
-          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-            Membership Plans
-          </Text>
+          <SectionHeader title="Membership Plans" />
           {MEMBERSHIP_PLANS.map((plan) => (
             <TouchableOpacity
               key={plan.name}
@@ -297,20 +278,14 @@ export default function GymScreen() {
               <GlassCard style={[styles.planCard, plan.popular && { borderColor: colors.primary }]}>
                 {plan.popular && (
                   <View style={[styles.popularBadge, { backgroundColor: colors.primary }]}>
-                    <Text style={[styles.popularTxt, { fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }]}>
-                      Popular
-                    </Text>
+                    <Text style={[colors.typography.bodyMedium, { color: colors.primaryForeground, fontSize: 10 }]}>Popular</Text>
                   </View>
                 )}
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.planName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-                    {plan.name}
-                  </Text>
-                  <Text style={[styles.planDuration, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    {plan.duration}
-                  </Text>
+                  <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>{plan.name}</Text>
+                  <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>{plan.duration}</Text>
                 </View>
-                <Text style={[styles.planPrice, { color: plan.popular ? colors.primary : colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                <Text style={[colors.typography.h2, { color: plan.popular ? colors.primary : colors.foreground }]}>
                   {plan.price}
                 </Text>
                 <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
@@ -322,9 +297,7 @@ export default function GymScreen() {
         {/* Owner analytics */}
         {ownerRole && (
           <GlassCard style={styles.ownerCard}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-              Gym Overview
-            </Text>
+            <SectionHeader title="Gym Overview" />
             {[
               { label: "Total Members", value: "248", icon: "people" as const, color: colors.primary },
               { label: "Active Today", value: "32", icon: "body" as const, color: colors.green },
@@ -335,12 +308,8 @@ export default function GymScreen() {
                 <View style={[styles.ownerStatIcon, { backgroundColor: stat.color + "20" }]}>
                   <Ionicons name={stat.icon} size={18} color={stat.color} />
                 </View>
-                <Text style={[styles.ownerStatLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                  {stat.label}
-                </Text>
-                <Text style={[styles.ownerStatVal, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                  {stat.value}
-                </Text>
+                <Text style={[colors.typography.body, { color: colors.mutedForeground, flex: 1 }]}>{stat.label}</Text>
+                <Text style={[colors.typography.h3, { color: colors.foreground }]}>{stat.value}</Text>
               </View>
             ))}
           </GlassCard>
@@ -379,54 +348,27 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   headerGrad: { position: "absolute", top: 0, left: 0, right: 0, height: 200 },
   scroll: { paddingHorizontal: 16, gap: 14 },
-  pageTitle: { fontSize: 28 },
   membershipCard: { padding: 20, minHeight: 120, overflow: "hidden" },
   membershipInner: { flexDirection: "row", justifyContent: "space-between" },
-  membershipGym: { fontSize: 16, color: "#FFF" },
-  membershipName: { fontSize: 13, marginTop: 4 },
   membershipBadge: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
-  membershipStatus: { fontSize: 13 },
   membershipRight: { alignItems: "flex-end" },
-  membershipSince: { fontSize: 11, color: "#FFF8" },
-  membershipDate: { fontSize: 14, color: "#FFF" },
-  membershipExpiry: { fontSize: 11, marginTop: 4 },
   qrCard: { padding: 16, gap: 14 },
   qrHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  qrTitle: { fontSize: 16 },
-  qrSub: { fontSize: 13, marginTop: 2 },
   checkedBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  checkedTxt: { fontSize: 13 },
   qrCodeWrap: { alignItems: "center", gap: 16 },
   scanBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20 },
-  scanBtnTxt: { color: "#FFFFFF", fontSize: 15 },
   checkedInBanner: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 12 },
-  checkedInTxt: { fontSize: 14 },
   slotCard: { padding: 16, gap: 14 },
-  sectionTitle: { fontSize: 17 },
   slotsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  slotBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1, alignItems: "center", minWidth: 80 },
-  slotTime: { fontSize: 13 },
-  slotFull: { fontSize: 10, marginTop: 2 },
-  bookBtn: { height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  bookBtnTxt: { fontSize: 15 },
+  slotBtn: { paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, alignItems: "center", minWidth: 80 },
+  bookBtn: { height: 48, alignItems: "center", justifyContent: "center" },
   trainerCard: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, marginBottom: 8 },
   trainerAvatar: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
-  trainerAvatarTxt: { fontSize: 16 },
-  trainerName: { fontSize: 15 },
-  trainerSpec: { fontSize: 12, marginTop: 2 },
   trainerMeta: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
-  trainerMetaTxt: { fontSize: 12 },
   bookTrainerBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10, borderWidth: 1 },
-  bookTrainerTxt: { fontSize: 13 },
   planCard: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16, marginBottom: 8, position: "relative" },
   popularBadge: { position: "absolute", top: -1, right: 12, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  popularTxt: { fontSize: 10 },
-  planName: { fontSize: 15 },
-  planDuration: { fontSize: 13, marginTop: 2 },
-  planPrice: { fontSize: 18 },
   ownerCard: { padding: 16, gap: 0 },
   ownerStat: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 0.5 },
   ownerStatIcon: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  ownerStatLabel: { flex: 1, fontSize: 14 },
-  ownerStatVal: { fontSize: 16 },
 });

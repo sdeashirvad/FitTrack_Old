@@ -1,4 +1,6 @@
+import Constants from "expo-constants";
 import { useAuth } from "@/context/AuthContext";
+import { useColors } from "@/hooks/useColors";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
@@ -32,10 +34,8 @@ interface StepData {
   activityLevel: string;
   dietaryPreference: string;
   workoutExperience: string;
-  // Owner extras
   gymName: string;
   gymLocation: string;
-  // Trainer extras
   specialization: string;
   certifications: string;
 }
@@ -58,10 +58,19 @@ const SPECIALIZATIONS = ["Strength & Conditioning", "Weight Loss", "Yoga & Flexi
 
 // ─── Chip component ───────────────────────────────────────────────────────────
 function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  const colors = useColors();
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8}
-      style={[styles.chip, selected && styles.chipActive]}>
-      <Text style={[styles.chipTxt, selected && styles.chipTxtActive]}>{label}</Text>
+      style={[
+        styles.chip,
+        { borderColor: colors.border, backgroundColor: colors.muted, borderRadius: colors.radius },
+        selected && { borderColor: colors.primary, backgroundColor: colors.primary + "15" },
+      ]}>
+      <Text style={[
+        colors.typography.caption,
+        { color: colors.mutedForeground },
+        selected && { color: colors.primary, fontFamily: "Inter_600SemiBold" },
+      ]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -74,25 +83,50 @@ function Field({ icon, placeholder, value, onChangeText, keyboard = "default" }:
   onChangeText: (t: string) => void;
   keyboard?: any;
 }) {
+  const colors = useColors();
   return (
-    <View style={styles.inputWrap}>
-      <Ionicons name={icon} size={18} color="#8B92A5" />
+    <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.muted, borderRadius: colors.radiusSmall }]}>
+      <Ionicons name={icon} size={18} color={colors.mutedForeground} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#8B92A5"
+        placeholderTextColor={colors.mutedForeground}
         keyboardType={keyboard}
-        style={styles.input}
+        style={[styles.input, colors.typography.body, { color: colors.foreground }]}
       />
     </View>
   );
 }
 
+// ─── API Host Resolution ──────────────────────────────────────────────────────
+function resolveApiHost() {
+  const hostUri =
+    typeof Constants.manifest?.debuggerHost === "string"
+      ? Constants.manifest.debuggerHost
+      : typeof Constants.expoConfig?.hostUri === "string"
+      ? Constants.expoConfig.hostUri
+      : null;
+
+  if (hostUri) {
+    const host = hostUri.includes("//")
+      ? hostUri.split("//")[1].split(":")[0]
+      : hostUri.split(":")[0];
+
+    if (Platform.OS === "android") {
+      return host === "localhost" ? "10.0.2.2" : host;
+    }
+    return host;
+  }
+
+  return Platform.OS === "android" ? "10.0.2.2" : "localhost";
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function SetupScreen() {
   const insets = useSafeAreaInsets();
-  const { user, token, updateUser } = useAuth();
+  const colors = useColors();
+  const { user, token, updateUser, logout } = useAuth();
   const [step, setStep] = useState(0);
   const [data, setData] = useState<StepData>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -100,6 +134,40 @@ export default function SetupScreen() {
 
   const role = user?.role ?? "member";
   const totalSteps = role === "member" ? 4 : 5;
+
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
+  const handleLogout = () => {
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm("Are you sure you want to cancel setup and log out?");
+      if (confirmed) {
+        logout().then(() => router.replace("/(auth)/login"));
+      }
+    } else {
+      Alert.alert(
+        "Cancel Setup",
+        "Are you sure you want to cancel and log out?",
+        [
+          { text: "No", style: "cancel" },
+          {
+            text: "Yes, Log Out",
+            style: "destructive",
+            onPress: async () => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              await logout();
+              router.replace("/(auth)/login");
+            },
+          },
+        ]
+      );
+    }
+  };
 
   const animateProgress = (to: number) => {
     Animated.spring(progressAnim, { toValue: to / (totalSteps - 1), useNativeDriver: false }).start();
@@ -150,7 +218,7 @@ export default function SetupScreen() {
           : undefined,
       };
 
-      const host = Platform.OS === "android" ? "10.0.2.2" : "localhost";
+      const host = resolveApiHost();
       const res = await fetch(`http://${host}:5000/api/auth/onboarding`, {
         method: "POST",
         headers: {
@@ -170,7 +238,7 @@ export default function SetupScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(tabs)");
     } catch (e: any) {
-      Alert.alert("Error", e.message || "Could not save your profile. Please try again.");
+      showAlert("Error", e.message || "Could not save your profile. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -181,24 +249,29 @@ export default function SetupScreen() {
     outputRange: ["0%", "100%"],
   });
 
-  const stepColors = ["#00D4FF", "#FF6B35", "#00FF88", "#A855F7", "#FFBB38"];
+  const stepColors = [colors.cyan, colors.orange, colors.green, colors.purple, colors.yellow];
   const currentColor = stepColors[step % stepColors.length];
 
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={[currentColor + "15", "#070B14"]} style={StyleSheet.absoluteFillObject} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <LinearGradient colors={[currentColor + "15", colors.background]} style={StyleSheet.absoluteFillObject} />
 
       {/* Progress bar */}
-      <View style={[styles.progressTrack, { marginTop: insets.top + 12 }]}>
+      <View style={[styles.progressTrack, { marginTop: insets.top + 12, backgroundColor: colors.border }]}>
         <Animated.View style={[styles.progressFill, { width: progressWidth, backgroundColor: currentColor }]} />
       </View>
 
       <View style={styles.stepIndicator}>
-        <Text style={styles.stepTxt}>Step {step + 1} of {totalSteps}</Text>
-        {step > 0 && (
+        <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>Step {step + 1} of {totalSteps}</Text>
+        {step > 0 ? (
           <TouchableOpacity onPress={back} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={16} color="#8B92A5" />
-            <Text style={styles.backTxt}>Back</Text>
+            <Ionicons name="arrow-back" size={16} color={colors.mutedForeground} />
+            <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>Back</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={handleLogout} style={styles.backBtn}>
+            <Ionicons name="log-out-outline" size={16} color={colors.mutedForeground} />
+            <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>Log Out</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -210,23 +283,23 @@ export default function SetupScreen() {
           {step === 0 && (
             <View style={styles.stepContent}>
               <Ionicons name="person-circle" size={56} color={currentColor} style={styles.stepIcon} />
-              <Text style={styles.stepTitle}>Let's get to know you</Text>
-              <Text style={styles.stepSub}>Basic details to personalise your experience</Text>
+              <Text style={[colors.typography.h1, { color: colors.foreground, textAlign: "center" }]}>Let's get to know you</Text>
+              <Text style={[colors.typography.body, { color: colors.mutedForeground, textAlign: "center", marginBottom: 8 }]}>Basic details to personalise your experience</Text>
 
               <Field icon="person-outline" placeholder="First name" value={data.firstName} onChangeText={set("firstName")} />
               <Field icon="person-outline" placeholder="Last name" value={data.lastName} onChangeText={set("lastName")} />
               <Field icon="location-outline" placeholder="City / Region" value={data.region} onChangeText={set("region")} />
 
-              <Text style={styles.groupLabel}>Gender</Text>
+              <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>Gender</Text>
               <View style={styles.chipGroup}>
                 {GENDERS.map(g => (
                   <Chip key={g} label={g} selected={data.gender === g} onPress={() => toggle("gender", g)} />
                 ))}
               </View>
 
-              <TouchableOpacity onPress={next} style={[styles.nextBtn, { backgroundColor: currentColor }]}>
-                <Text style={styles.nextBtnTxt}>Continue</Text>
-                <Ionicons name="arrow-forward" size={18} color="#070B14" />
+              <TouchableOpacity onPress={next} style={[styles.nextBtn, { backgroundColor: currentColor, borderRadius: colors.radius }]}>
+                <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>Continue</Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.primaryForeground} />
               </TouchableOpacity>
             </View>
           )}
@@ -235,24 +308,24 @@ export default function SetupScreen() {
           {step === 1 && (
             <View style={styles.stepContent}>
               <Ionicons name="body" size={56} color={currentColor} style={styles.stepIcon} />
-              <Text style={styles.stepTitle}>Your Body Metrics</Text>
-              <Text style={styles.stepSub}>Used to calculate BMI and personalise your plan</Text>
+              <Text style={[colors.typography.h1, { color: colors.foreground, textAlign: "center" }]}>Your Body Metrics</Text>
+              <Text style={[colors.typography.body, { color: colors.mutedForeground, textAlign: "center", marginBottom: 8 }]}>Used to calculate BMI and personalise your plan</Text>
 
               <View style={styles.row}>
-                <View style={[styles.inputWrap, { flex: 1 }]}>
-                  <Ionicons name="resize-outline" size={18} color="#8B92A5" />
-                  <TextInput value={data.heightCm} onChangeText={set("heightCm")} placeholder="Height (cm)" placeholderTextColor="#8B92A5" keyboardType="numeric" style={styles.input} />
+                <View style={[styles.inputWrap, { flex: 1, borderColor: colors.border, backgroundColor: colors.muted, borderRadius: colors.radiusSmall }]}>
+                  <Ionicons name="resize-outline" size={18} color={colors.mutedForeground} />
+                  <TextInput value={data.heightCm} onChangeText={set("heightCm")} placeholder="Height (cm)" placeholderTextColor={colors.mutedForeground} keyboardType="numeric" style={[styles.input, colors.typography.body, { color: colors.foreground }]} />
                 </View>
-                <View style={[styles.inputWrap, { flex: 1 }]}>
-                  <Ionicons name="scale-outline" size={18} color="#8B92A5" />
-                  <TextInput value={data.weightKg} onChangeText={set("weightKg")} placeholder="Weight (kg)" placeholderTextColor="#8B92A5" keyboardType="numeric" style={styles.input} />
+                <View style={[styles.inputWrap, { flex: 1, borderColor: colors.border, backgroundColor: colors.muted, borderRadius: colors.radiusSmall }]}>
+                  <Ionicons name="scale-outline" size={18} color={colors.mutedForeground} />
+                  <TextInput value={data.weightKg} onChangeText={set("weightKg")} placeholder="Weight (kg)" placeholderTextColor={colors.mutedForeground} keyboardType="numeric" style={[styles.input, colors.typography.body, { color: colors.foreground }]} />
                 </View>
               </View>
 
               {data.heightCm && data.weightKg ? (
-                <View style={[styles.bmiCard, { borderColor: currentColor + "40" }]}>
-                  <Text style={styles.bmiLabel}>Estimated BMI</Text>
-                  <Text style={[styles.bmiValue, { color: currentColor }]}>
+                <View style={[styles.bmiCard, { borderColor: currentColor + "40", backgroundColor: colors.card, borderRadius: colors.radiusSmall }]}>
+                  <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>Estimated BMI</Text>
+                  <Text style={[colors.typography.h1, { color: currentColor }]}>
                     {(parseFloat(data.weightKg) / Math.pow(parseFloat(data.heightCm) / 100, 2)).toFixed(1)}
                   </Text>
                 </View>
@@ -260,16 +333,16 @@ export default function SetupScreen() {
 
               <Field icon="fitness-outline" placeholder="Body fat % (optional)" value={data.bodyFatPercent} onChangeText={set("bodyFatPercent")} keyboard="numeric" />
 
-              <Text style={styles.groupLabel}>Fitness Goal</Text>
+              <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>Fitness Goal</Text>
               <View style={styles.chipGroup}>
                 {GOALS.map(g => (
                   <Chip key={g} label={g} selected={data.fitnessGoal === g} onPress={() => toggle("fitnessGoal", g)} />
                 ))}
               </View>
 
-              <TouchableOpacity onPress={next} style={[styles.nextBtn, { backgroundColor: currentColor }]}>
-                <Text style={styles.nextBtnTxt}>Continue</Text>
-                <Ionicons name="arrow-forward" size={18} color="#070B14" />
+              <TouchableOpacity onPress={next} style={[styles.nextBtn, { backgroundColor: currentColor, borderRadius: colors.radius }]}>
+                <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>Continue</Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.primaryForeground} />
               </TouchableOpacity>
             </View>
           )}
@@ -278,45 +351,45 @@ export default function SetupScreen() {
           {step === 2 && (
             <View style={styles.stepContent}>
               <Ionicons name="sunny" size={56} color={currentColor} style={styles.stepIcon} />
-              <Text style={styles.stepTitle}>Your Lifestyle</Text>
-              <Text style={styles.stepSub}>Helps us tailor workouts and nutrition</Text>
+              <Text style={[colors.typography.h1, { color: colors.foreground, textAlign: "center" }]}>Your Lifestyle</Text>
+              <Text style={[colors.typography.body, { color: colors.mutedForeground, textAlign: "center", marginBottom: 8 }]}>Helps us tailor workouts and nutrition</Text>
 
-              <Text style={styles.groupLabel}>Daily Activity Level</Text>
+              <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>Daily Activity Level</Text>
               <View style={styles.chipGroup}>
                 {ACTIVITY.map(a => (
                   <Chip key={a} label={a} selected={data.activityLevel === a} onPress={() => toggle("activityLevel", a)} />
                 ))}
               </View>
 
-              <Text style={styles.groupLabel}>Dietary Preference</Text>
+              <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>Dietary Preference</Text>
               <View style={styles.chipGroup}>
                 {DIET.map(d => (
                   <Chip key={d} label={d} selected={data.dietaryPreference === d} onPress={() => toggle("dietaryPreference", d)} />
                 ))}
               </View>
 
-              <Text style={styles.groupLabel}>Workout Experience</Text>
+              <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>Workout Experience</Text>
               <View style={styles.chipGroup}>
                 {EXPERIENCE.map(e => (
                   <Chip key={e} label={e} selected={data.workoutExperience === e} onPress={() => toggle("workoutExperience", e)} />
                 ))}
               </View>
 
-              <TouchableOpacity onPress={next} style={[styles.nextBtn, { backgroundColor: currentColor }]}>
-                <Text style={styles.nextBtnTxt}>Continue</Text>
-                <Ionicons name="arrow-forward" size={18} color="#070B14" />
+              <TouchableOpacity onPress={next} style={[styles.nextBtn, { backgroundColor: currentColor, borderRadius: colors.radius }]}>
+                <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>Continue</Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.primaryForeground} />
               </TouchableOpacity>
             </View>
           )}
 
-          {/* ── Step 3 (member): Confirmation / Step 3 (owner/trainer): Role extras ── */}
+          {/* ── Step 3 (member): Confirmation ── */}
           {step === 3 && role === "member" && (
             <View style={styles.stepContent}>
               <Ionicons name="checkmark-circle" size={64} color={currentColor} style={styles.stepIcon} />
-              <Text style={styles.stepTitle}>You're all set!</Text>
-              <Text style={styles.stepSub}>Here's a summary of your profile</Text>
+              <Text style={[colors.typography.h1, { color: colors.foreground, textAlign: "center" }]}>You're all set!</Text>
+              <Text style={[colors.typography.body, { color: colors.mutedForeground, textAlign: "center", marginBottom: 8 }]}>Here's a summary of your profile</Text>
 
-              <View style={styles.summaryCard}>
+              <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
                 {[
                   ["Name", `${data.firstName} ${data.lastName}`.trim() || "—"],
                   ["Region", data.region || "—"],
@@ -327,14 +400,14 @@ export default function SetupScreen() {
                   ["Diet", data.dietaryPreference || "—"],
                 ].map(([k, v]) => (
                   <View key={k} style={styles.summaryRow}>
-                    <Text style={styles.summaryKey}>{k}</Text>
-                    <Text style={styles.summaryVal}>{v}</Text>
+                    <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>{k}</Text>
+                    <Text style={[colors.typography.caption, { color: colors.foreground, fontFamily: "Inter_600SemiBold", maxWidth: "60%", textAlign: "right" }]}>{v}</Text>
                   </View>
                 ))}
               </View>
 
-              <TouchableOpacity onPress={finish} disabled={saving} style={[styles.nextBtn, { backgroundColor: currentColor, opacity: saving ? 0.7 : 1 }]}>
-                {saving ? <ActivityIndicator color="#070B14" /> : <Text style={styles.nextBtnTxt}>Go to Dashboard 🚀</Text>}
+              <TouchableOpacity onPress={finish} disabled={saving} style={[styles.nextBtn, { backgroundColor: currentColor, borderRadius: colors.radius, opacity: saving ? 0.7 : 1 }]}>
+                {saving ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>Go to Dashboard</Text>}
               </TouchableOpacity>
             </View>
           )}
@@ -343,15 +416,15 @@ export default function SetupScreen() {
           {step === 3 && role === "owner" && (
             <View style={styles.stepContent}>
               <Ionicons name="business" size={56} color={currentColor} style={styles.stepIcon} />
-              <Text style={styles.stepTitle}>Your Gym Details</Text>
-              <Text style={styles.stepSub}>Tell us about the gym you manage</Text>
+              <Text style={[colors.typography.h1, { color: colors.foreground, textAlign: "center" }]}>Your Gym Details</Text>
+              <Text style={[colors.typography.body, { color: colors.mutedForeground, textAlign: "center", marginBottom: 8 }]}>Tell us about the gym you manage</Text>
 
               <Field icon="business-outline" placeholder="Gym name" value={data.gymName} onChangeText={set("gymName")} />
               <Field icon="location-outline" placeholder="Gym location / city" value={data.gymLocation} onChangeText={set("gymLocation")} />
 
-              <TouchableOpacity onPress={next} style={[styles.nextBtn, { backgroundColor: currentColor }]}>
-                <Text style={styles.nextBtnTxt}>Continue</Text>
-                <Ionicons name="arrow-forward" size={18} color="#070B14" />
+              <TouchableOpacity onPress={next} style={[styles.nextBtn, { backgroundColor: currentColor, borderRadius: colors.radius }]}>
+                <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>Continue</Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.primaryForeground} />
               </TouchableOpacity>
             </View>
           )}
@@ -359,10 +432,10 @@ export default function SetupScreen() {
           {step === 3 && role === "trainer" && (
             <View style={styles.stepContent}>
               <Ionicons name="barbell" size={56} color={currentColor} style={styles.stepIcon} />
-              <Text style={styles.stepTitle}>Your Trainer Profile</Text>
-              <Text style={styles.stepSub}>Help members find the right trainer</Text>
+              <Text style={[colors.typography.h1, { color: colors.foreground, textAlign: "center" }]}>Your Trainer Profile</Text>
+              <Text style={[colors.typography.body, { color: colors.mutedForeground, textAlign: "center", marginBottom: 8 }]}>Help members find the right trainer</Text>
 
-              <Text style={styles.groupLabel}>Specialization</Text>
+              <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>Specialization</Text>
               <View style={styles.chipGroup}>
                 {SPECIALIZATIONS.map(s => (
                   <Chip key={s} label={s} selected={data.specialization === s} onPress={() => toggle("specialization", s)} />
@@ -371,9 +444,9 @@ export default function SetupScreen() {
 
               <Field icon="ribbon-outline" placeholder="Certifications (e.g. ACE, NASM)" value={data.certifications} onChangeText={set("certifications")} />
 
-              <TouchableOpacity onPress={next} style={[styles.nextBtn, { backgroundColor: currentColor }]}>
-                <Text style={styles.nextBtnTxt}>Continue</Text>
-                <Ionicons name="arrow-forward" size={18} color="#070B14" />
+              <TouchableOpacity onPress={next} style={[styles.nextBtn, { backgroundColor: currentColor, borderRadius: colors.radius }]}>
+                <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>Continue</Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.primaryForeground} />
               </TouchableOpacity>
             </View>
           )}
@@ -382,10 +455,10 @@ export default function SetupScreen() {
           {step === 4 && (
             <View style={styles.stepContent}>
               <Ionicons name="checkmark-circle" size={64} color={currentColor} style={styles.stepIcon} />
-              <Text style={styles.stepTitle}>Profile Complete!</Text>
-              <Text style={styles.stepSub}>You're ready to use FitTrack as a {role}</Text>
+              <Text style={[colors.typography.h1, { color: colors.foreground, textAlign: "center" }]}>Profile Complete!</Text>
+              <Text style={[colors.typography.body, { color: colors.mutedForeground, textAlign: "center", marginBottom: 8 }]}>You're ready to use FitTrack as a {role}</Text>
 
-              <View style={styles.summaryCard}>
+              <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
                 {[
                   ["Name", `${data.firstName} ${data.lastName}`.trim() || "—"],
                   ["Role", role.charAt(0).toUpperCase() + role.slice(1)],
@@ -394,14 +467,14 @@ export default function SetupScreen() {
                   ...(role === "trainer" ? [["Specialization", data.specialization || "—"]] : []),
                 ].map(([k, v]) => (
                   <View key={k} style={styles.summaryRow}>
-                    <Text style={styles.summaryKey}>{k}</Text>
-                    <Text style={styles.summaryVal}>{v}</Text>
+                    <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>{k}</Text>
+                    <Text style={[colors.typography.caption, { color: colors.foreground, fontFamily: "Inter_600SemiBold", maxWidth: "60%", textAlign: "right" }]}>{v}</Text>
                   </View>
                 ))}
               </View>
 
-              <TouchableOpacity onPress={finish} disabled={saving} style={[styles.nextBtn, { backgroundColor: currentColor, opacity: saving ? 0.7 : 1 }]}>
-                {saving ? <ActivityIndicator color="#070B14" /> : <Text style={styles.nextBtnTxt}>Go to Dashboard 🚀</Text>}
+              <TouchableOpacity onPress={finish} disabled={saving} style={[styles.nextBtn, { backgroundColor: currentColor, borderRadius: colors.radius, opacity: saving ? 0.7 : 1 }]}>
+                {saving ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>Go to Dashboard</Text>}
               </TouchableOpacity>
             </View>
           )}
@@ -414,34 +487,21 @@ export default function SetupScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#070B14" },
-  progressTrack: { height: 4, backgroundColor: "#1A2540", marginHorizontal: 20, borderRadius: 2 },
+  container: { flex: 1 },
+  progressTrack: { height: 4, marginHorizontal: 20, borderRadius: 2 },
   progressFill: { height: 4, borderRadius: 2 },
   stepIndicator: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingVertical: 12 },
-  stepTxt: { color: "#8B92A5", fontSize: 13, fontFamily: "Inter_400Regular" },
   backBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
-  backTxt: { color: "#8B92A5", fontSize: 13, fontFamily: "Inter_400Regular" },
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
   stepContent: { gap: 14 },
   stepIcon: { alignSelf: "center", marginBottom: 4 },
-  stepTitle: { fontSize: 26, color: "#FFFFFF", fontFamily: "Inter_700Bold", textAlign: "center" },
-  stepSub: { fontSize: 14, color: "#8B92A5", fontFamily: "Inter_400Regular", textAlign: "center", marginBottom: 8 },
-  groupLabel: { fontSize: 12, color: "#8B92A5", fontFamily: "Inter_500Medium", textTransform: "uppercase", letterSpacing: 0.5 },
   chipGroup: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: "#1A2540", backgroundColor: "#141E33" },
-  chipActive: { borderColor: "#00D4FF", backgroundColor: "#00D4FF15" },
-  chipTxt: { color: "#8B92A5", fontSize: 13, fontFamily: "Inter_400Regular" },
-  chipTxtActive: { color: "#00D4FF", fontFamily: "Inter_600SemiBold" },
-  inputWrap: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, height: 52, borderColor: "#1A2540", backgroundColor: "#141E33" },
-  input: { flex: 1, fontSize: 15, color: "#FFFFFF", fontFamily: "Inter_400Regular" },
+  chip: { paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1 },
+  inputWrap: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, paddingHorizontal: 14, height: 52 },
+  input: { flex: 1, fontSize: 15 },
   row: { flexDirection: "row", gap: 10 },
-  bmiCard: { borderWidth: 1, borderRadius: 12, padding: 14, alignItems: "center", backgroundColor: "#0F1729" },
-  bmiLabel: { color: "#8B92A5", fontSize: 12, fontFamily: "Inter_400Regular" },
-  bmiValue: { fontSize: 32, fontFamily: "Inter_700Bold", marginTop: 4 },
-  nextBtn: { height: 56, borderRadius: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 8 },
-  nextBtnTxt: { fontSize: 17, color: "#070B14", fontFamily: "Inter_700Bold" },
-  summaryCard: { backgroundColor: "#0F1729", borderRadius: 16, borderWidth: 1, borderColor: "#1A2540", padding: 16, gap: 12 },
+  bmiCard: { borderWidth: 1, padding: 14, alignItems: "center" },
+  nextBtn: { height: 56, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 8 },
+  summaryCard: { borderWidth: 1, padding: 16, gap: 12 },
   summaryRow: { flexDirection: "row", justifyContent: "space-between" },
-  summaryKey: { color: "#8B92A5", fontSize: 13, fontFamily: "Inter_400Regular" },
-  summaryVal: { color: "#FFFFFF", fontSize: 13, fontFamily: "Inter_600SemiBold", maxWidth: "60%", textAlign: "right" },
 });

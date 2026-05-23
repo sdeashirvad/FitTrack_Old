@@ -113,6 +113,17 @@ async function getUserRowById(id: string): Promise<UserRow | null> {
   return row ?? null;
 }
 
+async function getUserRowByUsername(username: string): Promise<UserRow | null> {
+  const [row] = await db
+    .select({ user: users, profile: userProfiles })
+    .from(users)
+    .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
+    .where(eq(users.username, username))
+    .limit(1);
+
+  return row ?? null;
+}
+
 // ─── Public user shape ────────────────────────────────────────────────────────
 function formatUser(user: User, profile: UserProfile | null) {
   const firstName = profile?.firstName || "";
@@ -120,6 +131,7 @@ function formatUser(user: User, profile: UserProfile | null) {
 
   return {
     id: user.id,
+    username: user.username ?? null,
     email: user.email ?? "",
     phone: user.phone ?? "",
     role: user.primaryRole,
@@ -138,6 +150,10 @@ function formatUser(user: User, profile: UserProfile | null) {
 // ─── Exported finders ─────────────────────────────────────────────────────────
 export async function findUserByEmail(email: string) {
   return getUserRowByEmail(email);
+}
+
+export async function findUserByUsername(username: string) {
+  return getUserRowByUsername(username);
 }
 
 export async function findUserByPhone(phone: string) {
@@ -198,6 +214,7 @@ export async function deleteUserAccount(userId: string) {
 
 // ─── User creation ────────────────────────────────────────────────────────────
 export async function createUserWithProfile(options: {
+  username?: string;
   email?: string;
   phone?: string;
   passwordHash?: string;
@@ -214,6 +231,7 @@ export async function createUserWithProfile(options: {
   const [created] = await db
     .insert(users)
     .values({
+      username: options.username?.trim(),
       email,
       phone: options.phone,
       passwordHash: options.passwordHash,

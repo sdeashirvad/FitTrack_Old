@@ -75,12 +75,12 @@ export function ProgressRing({
         {centerContent ?? (
           <>
             {label && (
-              <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+              <Text style={[colors.typography.h2, { color: colors.foreground, textAlign: "center" }]}>
                 {label}
               </Text>
             )}
             {sublabel && (
-              <Text style={[styles.sublabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[colors.typography.tiny, { color: colors.mutedForeground, textAlign: "center", marginTop: 2 }]}>
                 {sublabel}
               </Text>
             )}
@@ -102,14 +102,5 @@ const styles = StyleSheet.create({
   center: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  label: {
-    fontSize: 22,
-    textAlign: "center",
-  },
-  sublabel: {
-    fontSize: 11,
-    textAlign: "center",
-    marginTop: 2,
   },
 });

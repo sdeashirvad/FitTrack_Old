@@ -14,6 +14,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  username?: string | null;
   phone: string;
   role: UserRole;
   avatar?: string | null;
@@ -32,7 +33,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, role?: UserRole) => Promise<void>;
+  register: (email: string, username: string, password: string, role?: UserRole) => Promise<void>;
   loginWithPhone: (phone: string, otp: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
@@ -156,10 +157,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ─── Register ───────────────────────────────────────────────────────────────
-  const register = async (email: string, password: string, role: UserRole = "member") => {
+  const register = async (email: string, username: string, password: string, role: UserRole = "member") => {
     const response = await requestJson<{ token: string; user: User }>("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password, role }),
+      body: JSON.stringify({ email, username, password, role }),
     });
     await persistAuth(response.user, response.token);
   };

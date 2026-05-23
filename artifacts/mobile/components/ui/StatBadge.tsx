@@ -14,11 +14,11 @@ export function StatBadge({ icon, value, label, color }: StatBadgeProps) {
   const colors = useColors();
   return (
     <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
-      <View style={[styles.iconWrap, { backgroundColor: color + "20" }]}>
+      <View style={[styles.iconWrap, { backgroundColor: color + "20", borderRadius: colors.radiusSmall }]}>
         <Ionicons name={icon} size={18} color={color} />
       </View>
-      <Text style={[styles.value, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{value}</Text>
-      <Text style={[styles.label, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{label}</Text>
+      <Text style={[colors.typography.h2, { color: colors.foreground }]}>{value}</Text>
+      <Text style={[colors.typography.tiny, { color: colors.mutedForeground }]}>{label}</Text>
     </View>
   );
 }
@@ -34,14 +34,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-  },
-  value: {
-    fontSize: 18,
-  },
-  label: {
-    fontSize: 11,
   },
 });

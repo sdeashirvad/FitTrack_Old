@@ -1,5 +1,6 @@
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ProgressRing } from "@/components/ui/ProgressRing";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatBadge } from "@/components/ui/StatBadge";
 import { useAuth } from "@/context/AuthContext";
 import { useFitness } from "@/context/FitnessContext";
@@ -78,11 +79,11 @@ export default function DashboardScreen() {
             }}
             activeOpacity={0.7}
           >
-            <Text style={[styles.greeting, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[colors.typography.body, { color: colors.mutedForeground }]}>
               {greeting()},
             </Text>
-            <Text style={[styles.userName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-              {user?.name?.split(" ")[0] ?? "Champ"} 💪
+            <Text style={[colors.typography.h1, { color: colors.foreground }]}>
+              {user?.name?.split(" ")[0] ?? "Champ"}
             </Text>
           </TouchableOpacity>
           <View style={styles.headerActions}>
@@ -91,7 +92,6 @@ export default function DashboardScreen() {
             >
               <Ionicons name="notifications-outline" size={22} color={colors.foreground} />
             </TouchableOpacity>
-            {/* Avatar shortcut → Profile */}
             <TouchableOpacity
               onPress={() => {
                 Haptics.selectionAsync();
@@ -119,13 +119,13 @@ export default function DashboardScreen() {
           />
           <View style={styles.streakInner}>
             <View>
-              <Text style={[styles.streakNum, { color: colors.secondary, fontFamily: "Inter_700Bold" }]}>
+              <Text style={[colors.typography.h1, { color: colors.secondary }]}>
                 {streak} days
               </Text>
-              <Text style={[styles.streakLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+              <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>
                 Workout Streak
               </Text>
-              <Text style={[styles.streakSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
                 Don't break the chain!
               </Text>
             </View>
@@ -147,10 +147,10 @@ export default function DashboardScreen() {
               label={todayLog.calories.toString()}
               sublabel={`/ ${calorieGoal} kcal`}
             />
-            <Text style={[styles.ringLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>
               Calories
             </Text>
-            <Text style={[styles.ringSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
               {calorieGoal - todayLog.calories} left
             </Text>
           </GlassCard>
@@ -165,7 +165,7 @@ export default function DashboardScreen() {
               label={`${todayLog.water}`}
               sublabel={`/ ${waterGoal} cups`}
             />
-            <Text style={[styles.ringLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>
               Water
             </Text>
             <TouchableOpacity
@@ -176,7 +176,7 @@ export default function DashboardScreen() {
               style={[styles.addWaterBtn, { backgroundColor: colors.cyan + "20", borderColor: colors.cyan + "40" }]}
             >
               <Ionicons name="add" size={14} color={colors.cyan} />
-              <Text style={[styles.addWaterTxt, { color: colors.cyan, fontFamily: "Inter_600SemiBold" }]}>
+              <Text style={[colors.typography.bodyMedium, { color: colors.cyan, fontSize: 12 }]}>
                 +1 cup
               </Text>
             </TouchableOpacity>
@@ -185,9 +185,7 @@ export default function DashboardScreen() {
 
         {/* Macros */}
         <GlassCard style={styles.macrosCard}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-            Today's Macros
-          </Text>
+          <SectionHeader title="Today's Macros" />
           <View style={styles.macrosRow}>
             <MacroItem label="Protein" value={totalProtein} unit="g" color={colors.primary} max={160} />
             <MacroItem label="Carbs" value={totalCarbs} unit="g" color={colors.secondary} max={220} />
@@ -208,16 +206,14 @@ export default function DashboardScreen() {
         </View>
 
         {/* Quick actions */}
-        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold", marginLeft: 0 }]}>
-          Quick Actions
-        </Text>
+        <SectionHeader title="Quick Actions" />
         <View style={styles.quickGrid}>
           {[
             { icon: "barbell" as const, label: "Log Workout", color: colors.primary, route: "/(tabs)/workout" },
             { icon: "restaurant" as const, label: "Log Meal", color: colors.secondary, route: "/(tabs)/diet" },
             { icon: "qr-code" as const, label: "QR Check-in", color: colors.green, route: "/(tabs)/gym" },
             { icon: "analytics" as const, label: "Analytics", color: colors.purple, route: "/analytics" },
-            { icon: "calendar" as const, label: "Weekly Plan", color: "#00D4FF", route: "/workout/weekly-plan" },
+            { icon: "calendar" as const, label: "Weekly Plan", color: colors.cyan, route: "/workout/weekly-plan" },
             { icon: "scan" as const, label: "InBody", color: colors.orange, route: "/inbody" },
           ].map((item) => (
             <TouchableOpacity
@@ -229,35 +225,33 @@ export default function DashboardScreen() {
               activeOpacity={0.8}
               style={[
                 styles.quickBtn,
-                { backgroundColor: colors.card, borderColor: colors.border },
+                { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius },
               ]}
             >
               <View style={[styles.quickIconWrap, { backgroundColor: item.color + "20" }]}>
                 <Ionicons name={item.icon} size={24} color={item.color} />
               </View>
-              <Text style={[styles.quickLabel, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>
+              <Text style={[colors.typography.bodyMedium, { color: colors.foreground, fontSize: 12 }]}>
                 {item.label}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Today's plan */}
-        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-          Recent Meals
-        </Text>
+        {/* Recent meals */}
+        <SectionHeader title="Recent Meals" />
         {todayLog.meals.slice(0, 3).map((meal) => (
           <GlassCard key={meal.id} style={styles.mealRow}>
             <View style={[styles.mealDot, { backgroundColor: colors.primary }]} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.mealName, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>
+              <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>
                 {meal.name}
               </Text>
-              <Text style={[styles.mealMeta, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
                 {meal.type} · {meal.time}
               </Text>
             </View>
-            <Text style={[styles.mealCal, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[colors.typography.bodyMedium, { color: colors.primary }]}>
               {meal.calories} kcal
             </Text>
           </GlassCard>
@@ -275,8 +269,8 @@ function MacroItem({ label, value, unit, color, max }: {
   return (
     <View style={{ flex: 1, gap: 6 }}>
       <View style={styles.macroRow}>
-        <Text style={[styles.macroLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{label}</Text>
-        <Text style={[styles.macroVal, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{value}{unit}</Text>
+        <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>{label}</Text>
+        <Text style={[colors.typography.bodyMedium, { color: colors.foreground, fontSize: 13 }]}>{value}{unit}</Text>
       </View>
       <View style={[styles.macroTrack, { backgroundColor: colors.border }]}>
         <View style={[styles.macroFill, { width: `${progress * 100}%` as any, backgroundColor: color }]} />
@@ -290,39 +284,24 @@ const styles = StyleSheet.create({
   headerGrad: { position: "absolute", top: 0, left: 0, right: 0, height: 220 },
   scroll: { paddingHorizontal: 16, gap: 14 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
-  greeting: { fontSize: 14 },
-  userName: { fontSize: 26, marginTop: 2 },
   headerActions: { flexDirection: "row", gap: 8, alignItems: "center" },
   iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", borderWidth: 1 },
   avatarBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", borderWidth: 2 },
   streakCard: { padding: 16, marginBottom: 2 },
   streakInner: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  streakNum: { fontSize: 28 },
-  streakLabel: { fontSize: 16, marginTop: 2 },
-  streakSub: { fontSize: 13, marginTop: 2 },
   streakIconWrap: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center" },
   ringsRow: { flexDirection: "row", gap: 12 },
   ringCard: { flex: 1, alignItems: "center", padding: 16, gap: 8 },
-  ringLabel: { fontSize: 14 },
-  ringSub: { fontSize: 12 },
   addWaterBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
-  addWaterTxt: { fontSize: 12 },
   macrosCard: { padding: 16 },
   macrosRow: { gap: 12, marginTop: 12 },
   macroRow: { flexDirection: "row", justifyContent: "space-between" },
-  macroLabel: { fontSize: 13 },
-  macroVal: { fontSize: 13 },
   macroTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
   macroFill: { height: 6, borderRadius: 3 },
   statsRow: { flexDirection: "row", gap: 8 },
-  sectionTitle: { fontSize: 17, marginVertical: 4 },
   quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  quickBtn: { width: "30%", borderRadius: 16, borderWidth: 1, padding: 14, gap: 8, flexGrow: 1 },
+  quickBtn: { width: "30%", borderWidth: 1, padding: 14, gap: 8, flexGrow: 1 },
   quickIconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  quickLabel: { fontSize: 12 },
   mealRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
   mealDot: { width: 8, height: 8, borderRadius: 4 },
-  mealName: { fontSize: 14 },
-  mealMeta: { fontSize: 12, marginTop: 2 },
-  mealCal: { fontSize: 14 },
 });

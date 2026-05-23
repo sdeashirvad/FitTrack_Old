@@ -52,6 +52,13 @@ export interface UploadResponse {
   reportId: string;
   extractedMetrics: InBodyMetrics;
   extractedText: string;
+  geminiAnalysis?: unknown;
+}
+
+export interface AnalyzeResponse {
+  success: boolean;
+  reportId: string;
+  analysis: unknown;
 }
 
 export interface InBodyReport {
@@ -82,12 +89,20 @@ export async function uploadInbodyReport(
   onProgress?.({ step: "uploading", percent: 20 });
 
   const formData = new FormData();
-  // React Native FormData accepts { uri, type, name }
-  formData.append("report", {
-    uri,
-    type: mimeType,
-    name: fileName,
-  } as any);
+
+  if (Platform.OS === "web") {
+    // On web, fetch the URI and create a Blob
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    formData.append("report", blob, fileName);
+  } else {
+    // On native, React Native FormData accepts { uri, type, name }
+    formData.append("report", {
+      uri,
+      type: mimeType,
+      name: fileName,
+    } as any);
+  }
 
   onProgress?.({ step: "uploading", percent: 50 });
 
@@ -145,4 +160,22 @@ export async function getInbodyReport(id: string, token: string): Promise<InBody
   if (!res.ok) throw new Error("Failed to fetch report");
   const data = await res.json() as { success: boolean; report: InBodyReport };
   return data.report;
+}
+
+// ─── Run Gemini AI analysis on an existing report ─────────────────────────────
+export async function analyzeInbodyReport(reportId: string, token: string): Promise<AnalyzeResponse> {
+  const url = `${getApiBaseUrl()}/api/inbody/analyze/${reportId}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const msg = (data as { error?: string }).error ?? "Analysis failed";
+    throw new Error(msg);
+  }
+  return res.json() as Promise<AnalyzeResponse>;
 }

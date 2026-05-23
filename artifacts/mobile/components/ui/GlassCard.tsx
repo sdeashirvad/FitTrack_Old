@@ -1,18 +1,18 @@
 import { useColors } from "@/hooks/useColors";
-import React from "react";
-import {
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  ViewStyle,
-  useColorScheme,
-} from "react-native";
+import React, { useEffect } from "react";
+import { StyleSheet, TouchableOpacity, View, ViewStyle } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
 interface GlassCardProps {
   children: React.ReactNode;
   style?: ViewStyle;
   onPress?: () => void;
   elevated?: boolean;
+  shadowLevel?: "soft" | "medium" | "strong";
 }
 
 export function GlassCard({
@@ -20,9 +20,20 @@ export function GlassCard({
   style,
   onPress,
   elevated,
+  shadowLevel = "soft",
 }: GlassCardProps) {
   const colors = useColors();
-  const isDark = useColorScheme() === "dark";
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    opacity.value = withTiming(1, { duration: 300 });
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  const shadowStyle = elevated ? colors.shadow[shadowLevel] : {};
 
   const cardStyle = [
     styles.card,
@@ -31,22 +42,25 @@ export function GlassCard({
       borderColor: colors.border,
       borderRadius: colors.radius,
     },
+    shadowStyle,
     style,
   ];
 
   if (onPress) {
     return (
-      <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={0.8}
-        style={cardStyle}
-      >
-        {children}
-      </TouchableOpacity>
+      <Animated.View style={animatedStyle}>
+        <TouchableOpacity
+          onPress={onPress}
+          activeOpacity={0.8}
+          style={cardStyle}
+        >
+          {children}
+        </TouchableOpacity>
+      </Animated.View>
     );
   }
 
-  return <View style={cardStyle}>{children}</View>;
+  return <Animated.View style={[animatedStyle, cardStyle]}>{children}</Animated.View>;
 }
 
 const styles = StyleSheet.create({

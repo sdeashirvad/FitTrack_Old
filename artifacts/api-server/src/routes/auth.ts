@@ -6,6 +6,7 @@ import {
   createUserWithProfile,
   findUserByEmail,
   findUserByPhone,
+  findUserByUsername,
   findUserById,
   hashPassword,
   normalizeRole,
@@ -23,7 +24,7 @@ const router = Router();
 
 // ─── Email/Password Register ──────────────────────────────────────────────────
 router.post("/auth/register", async (req, res) => {
-  const { email, password, role } = req.body;
+  const { email, username, password, role } = req.body;
 
   if (typeof email !== "string" || typeof password !== "string") {
     return res.status(400).json({ error: "Email and password are required" });
@@ -31,22 +32,35 @@ router.post("/auth/register", async (req, res) => {
   if (password.length < 8) {
     return res.status(400).json({ error: "Password must be at least 8 characters" });
   }
+  
+  if (username && typeof username !== "string") {
+    return res.status(400).json({ error: "Username must be a string" });
+  }
 
   const normalizedEmail = email.trim().toLowerCase();
   const normalizedRole = normalizeRole(role);
+  const normalizedUsername = username?.trim().toLowerCase();
 
-  const existing = await findUserByEmail(normalizedEmail);
-  if (existing) {
-    const provider = (existing.user as any).authProvider ?? "email";
+  const existingEmail = await findUserByEmail(normalizedEmail);
+  if (existingEmail) {
+    const provider = (existingEmail.user as any).authProvider ?? "email";
     logger.warn({ email: normalizedEmail, provider }, "Register attempt for existing email");
     if (provider && provider !== "email") {
       return res.status(409).json({ error: `An account already exists using ${provider}. Please sign in with ${provider}.` });
     }
     return res.status(409).json({ error: "An account with this email already exists. Try signing in or use password reset." });
   }
+  
+  if (normalizedUsername) {
+    const existingUsername = await findUserByUsername(normalizedUsername);
+    if (existingUsername) {
+      return res.status(409).json({ error: "This username is already taken. Please choose another." });
+    }
+  }
 
   const passwordHash = await hashPassword(password);
   const user = await createUserWithProfile({
+    username: normalizedUsername,
     email: normalizedEmail,
     passwordHash,
     role: normalizedRole,
@@ -57,46 +71,51 @@ router.post("/auth/register", async (req, res) => {
   const row = await findUserById(user.id);
   const token = createJwtToken(user, false);
 
-  logger.info({ userId: user.id, email: normalizedEmail, role: normalizedRole }, "New user registered");
+  logger.info({ userId: user.id, email: normalizedEmail, username: normalizedUsername, role: normalizedRole }, "New user registered");
   return res.status(201).json({ token, user: toPublicUser(row!.user, row!.profile) });
 });
 
 // ─── Email/Password Login ─────────────────────────────────────────────────────
 router.post("/auth/login", async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  if (typeof email !== "string" || typeof password !== "string") {
-    return res.status(400).json({ error: "Email and password are required" });
+    if (typeof email !== "string" || typeof password !== "string") {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const row = await findUserByEmail(normalizedEmail);
+
+    if (!row) {
+      // Uniform error — don't reveal whether email exists
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    const { user, profile } = row;
+
+    if (!user.passwordHash) {
+      // Account was created via Google/SSO — no password set
+      return res.status(401).json({
+        error: "This account uses Google sign-in. Please continue with Google.",
+      });
+    }
+
+    const passwordMatches = await comparePassword(password, user.passwordHash);
+    if (!passwordMatches) {
+      logger.warn({ email: normalizedEmail }, "Login failed: invalid password");
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    const onboardingCompleted = profile?.onboardingCompleted ?? false;
+    const token = createJwtToken(user, onboardingCompleted);
+
+    logger.info({ userId: user.id, email: normalizedEmail }, "Email login successful");
+    return res.json({ token, user: toPublicUser(user, profile) });
+  } catch (err: any) {
+    logger.error({ err }, "Login error");
+    return res.status(500).json({ error: "Internal server error", details: err?.message });
   }
-
-  const normalizedEmail = email.trim().toLowerCase();
-  const row = await findUserByEmail(normalizedEmail);
-
-  if (!row) {
-    // Uniform error — don't reveal whether email exists
-    return res.status(401).json({ error: "Invalid email or password" });
-  }
-
-  const { user, profile } = row;
-
-  if (!user.passwordHash) {
-    // Account was created via Google/SSO — no password set
-    return res.status(401).json({
-      error: "This account uses Google sign-in. Please continue with Google.",
-    });
-  }
-
-  const passwordMatches = await comparePassword(password, user.passwordHash);
-  if (!passwordMatches) {
-    logger.warn({ email: normalizedEmail }, "Login failed: invalid password");
-    return res.status(401).json({ error: "Invalid email or password" });
-  }
-
-  const onboardingCompleted = profile?.onboardingCompleted ?? false;
-  const token = createJwtToken(user, onboardingCompleted);
-
-  logger.info({ userId: user.id, email: normalizedEmail }, "Email login successful");
-  return res.json({ token, user: toPublicUser(user, profile) });
 });
 
 // ─── Phone OTP Login ──────────────────────────────────────────────────────────

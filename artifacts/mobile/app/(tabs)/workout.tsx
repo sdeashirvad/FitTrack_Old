@@ -1,4 +1,5 @@
 import { GlassCard } from "@/components/ui/GlassCard";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useFitness } from "@/context/FitnessContext";
 import { useColors } from "@/hooks/useColors";
 import { Ionicons } from "@expo/vector-icons";
@@ -67,13 +68,12 @@ export default function WorkoutScreen() {
           { paddingTop: topPad + 12, paddingBottom: insets.bottom + 100 },
         ]}
       >
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+        <Text style={[colors.typography.h1, { color: colors.foreground }]}>
           Workouts
         </Text>
 
         {/* Feature cards row */}
         <View style={styles.featureRow}>
-          {/* Weekly Plan */}
           <TouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -88,17 +88,16 @@ export default function WorkoutScreen() {
               end={{ x: 1, y: 1 }}
               style={[styles.featureCardInner, { borderRadius: colors.radius }]}
             >
-              <Ionicons name="calendar" size={28} color="#FFFFFF" />
-              <Text style={[styles.featureCardTitle, { fontFamily: "Inter_700Bold" }]}>
+              <Ionicons name="calendar" size={28} color={colors.primaryForeground} />
+              <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>
                 Weekly Plan
               </Text>
-              <Text style={[styles.featureCardSub, { fontFamily: "Inter_400Regular" }]}>
+              <Text style={[colors.typography.caption, { color: colors.primaryForeground + "99" }]}>
                 PPL, Upper/Lower & more
               </Text>
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* InBody */}
           <TouchableOpacity
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -108,16 +107,16 @@ export default function WorkoutScreen() {
             style={styles.featureCardHalf}
           >
             <LinearGradient
-              colors={[colors.secondary, "#FF4757"]}
+              colors={[colors.secondary, colors.red]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={[styles.featureCardInner, { borderRadius: colors.radius }]}
             >
-              <Ionicons name="scan" size={28} color="#FFFFFF" />
-              <Text style={[styles.featureCardTitle, { fontFamily: "Inter_700Bold" }]}>
+              <Ionicons name="scan" size={28} color={colors.primaryForeground} />
+              <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>
                 InBody Analysis
               </Text>
-              <Text style={[styles.featureCardSub, { fontFamily: "Inter_400Regular" }]}>
+              <Text style={[colors.typography.caption, { color: colors.primaryForeground + "99" }]}>
                 AI body composition plan
               </Text>
             </LinearGradient>
@@ -131,7 +130,7 @@ export default function WorkoutScreen() {
             setShowQuick(true);
           }}
           activeOpacity={0.85}
-          style={styles.startBtn}
+          style={[styles.startBtn, { borderRadius: colors.radius }]}
         >
           <LinearGradient
             colors={[colors.primary, colors.purple]}
@@ -140,33 +139,23 @@ export default function WorkoutScreen() {
             style={styles.startBtnInner}
           >
             <View style={styles.startBtnContent}>
-              <Ionicons name="play-circle" size={32} color="#FFFFFF" />
+              <Ionicons name="play-circle" size={32} color={colors.primaryForeground} />
               <View>
-                <Text style={[styles.startBtnTitle, { fontFamily: "Inter_700Bold" }]}>
+                <Text style={[colors.typography.h3, { color: colors.primaryForeground }]}>
                   Start Workout
                 </Text>
-                <Text style={[styles.startBtnSub, { fontFamily: "Inter_400Regular" }]}>
+                <Text style={[colors.typography.caption, { color: colors.primaryForeground + "99" }]}>
                   Quick log or choose a template
                 </Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={22} color="#FFFFFF80" />
+            <Ionicons name="chevron-forward" size={22} color={colors.primaryForeground + "80"} />
           </LinearGradient>
         </TouchableOpacity>
 
         {/* AI Suggestions */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-              Suggested Workouts
-            </Text>
-            <View style={[styles.aiBadge, { backgroundColor: colors.purple + "20" }]}>
-              <Ionicons name="sparkles" size={12} color={colors.purple} />
-              <Text style={[styles.aiTxt, { color: colors.purple, fontFamily: "Inter_600SemiBold" }]}>
-                AI
-              </Text>
-            </View>
-          </View>
+          <SectionHeader title="Suggested Workouts" showAI />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizList}>
             {SUGGESTED.map((w) => (
               <TouchableOpacity
@@ -177,23 +166,23 @@ export default function WorkoutScreen() {
                   Alert.alert("Workout Started!", `${w.name} logged successfully.`);
                 }}
                 activeOpacity={0.85}
-                style={[styles.suggestCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                style={[styles.suggestCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}
               >
                 <View style={[styles.suggestIcon, { backgroundColor: w.color + "20" }]}>
                   <Ionicons name={w.icon} size={28} color={w.color} />
                 </View>
-                <Text style={[styles.suggestName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>
                   {w.name}
                 </Text>
-                <Text style={[styles.suggestDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
                   {w.desc}
                 </Text>
                 <View style={styles.suggestMeta}>
                   <Ionicons name="time-outline" size={12} color={colors.mutedForeground} />
-                  <Text style={[styles.suggestMetaTxt, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  <Text style={[colors.typography.tiny, { color: colors.mutedForeground }]}>
                     {w.duration}
                   </Text>
-                  <Text style={[styles.suggestMetaTxt, { color: w.color, fontFamily: "Inter_500Medium" }]}>
+                  <Text style={[colors.typography.tiny, { color: w.color }]}>
                     · {w.exercises} ex
                   </Text>
                 </View>
@@ -204,13 +193,11 @@ export default function WorkoutScreen() {
 
         {/* Recent workouts */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-            Recent Workouts
-          </Text>
+          <SectionHeader title="Recent Workouts" />
           {recentWorkouts.length === 0 ? (
             <GlassCard style={styles.emptyCard}>
               <Ionicons name="barbell-outline" size={36} color={colors.mutedForeground} />
-              <Text style={[styles.emptyTxt, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[colors.typography.body, { color: colors.mutedForeground, textAlign: "center" }]}>
                 No workouts yet. Start your first one!
               </Text>
             </GlassCard>
@@ -222,19 +209,19 @@ export default function WorkoutScreen() {
                     <Ionicons name="barbell" size={20} color={colors.primary} />
                   </View>
                   <View>
-                    <Text style={[styles.workoutName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                    <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>
                       {w.name}
                     </Text>
-                    <Text style={[styles.workoutMeta, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                    <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
                       {w.date} · {w.duration} min
                     </Text>
                   </View>
                 </View>
                 <View style={styles.workoutRight}>
-                  <Text style={[styles.workoutCal, { color: colors.primary, fontFamily: "Inter_700Bold" }]}>
+                  <Text style={[colors.typography.h2, { color: colors.primary }]}>
                     {w.calories}
                   </Text>
-                  <Text style={[styles.workoutCalLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  <Text style={[colors.typography.tiny, { color: colors.mutedForeground }]}>
                     kcal
                   </Text>
                 </View>
@@ -247,9 +234,9 @@ export default function WorkoutScreen() {
       {/* Quick log modal */}
       <Modal visible={showQuick} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border, borderTopLeftRadius: colors.radiusLarge, borderTopRightRadius: colors.radiusLarge }]}>
             <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+            <Text style={[colors.typography.h2, { color: colors.foreground }]}>
               Quick Log Workout
             </Text>
             <TextInput
@@ -259,15 +246,16 @@ export default function WorkoutScreen() {
               placeholderTextColor={colors.mutedForeground}
               style={[
                 styles.modalInput,
-                { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted, fontFamily: "Inter_400Regular" },
+                { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted, borderRadius: colors.radiusSmall },
+                colors.typography.body,
               ]}
             />
             <TouchableOpacity
               onPress={startQuickWorkout}
               activeOpacity={0.85}
-              style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+              style={[styles.modalBtn, { backgroundColor: colors.primary, borderRadius: colors.radiusSmall }]}
             >
-              <Text style={[styles.modalBtnTxt, { color: colors.primaryForeground, fontFamily: "Inter_700Bold" }]}>
+              <Text style={[colors.typography.bodyMedium, { color: colors.primaryForeground, fontSize: 16 }]}>
                 Log Workout
               </Text>
             </TouchableOpacity>
@@ -275,7 +263,7 @@ export default function WorkoutScreen() {
               onPress={() => setShowQuick(false)}
               style={styles.modalCancel}
             >
-              <Text style={[styles.modalCancelTxt, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[colors.typography.body, { color: colors.mutedForeground }]}>
                 Cancel
               </Text>
             </TouchableOpacity>
@@ -290,46 +278,26 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   headerGrad: { position: "absolute", top: 0, left: 0, right: 0, height: 200 },
   scroll: { paddingHorizontal: 16, gap: 14 },
-  pageTitle: { fontSize: 28, marginBottom: 4 },
   featureRow: { flexDirection: "row", gap: 10 },
   featureCardHalf: { flex: 1, borderRadius: 16, overflow: "hidden" },
   featureCardInner: { padding: 16, gap: 8, minHeight: 130, justifyContent: "flex-end" },
-  featureCardTitle: { color: "#FFFFFF", fontSize: 15 },
-  featureCardSub: { color: "#FFFFFF99", fontSize: 12 },
-  startBtn: { borderRadius: 20, overflow: "hidden" },
+  startBtn: { overflow: "hidden" },
   startBtnInner: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20 },
   startBtnContent: { flexDirection: "row", alignItems: "center", gap: 14 },
-  startBtnTitle: { color: "#FFFFFF", fontSize: 18 },
-  startBtnSub: { color: "#FFFFFF99", fontSize: 13, marginTop: 2 },
   section: { gap: 10 },
-  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  sectionTitle: { fontSize: 17 },
-  aiBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  aiTxt: { fontSize: 11 },
   horizList: { gap: 12, paddingRight: 16 },
-  suggestCard: { width: 160, borderRadius: 16, borderWidth: 1, padding: 14, gap: 8 },
+  suggestCard: { width: 160, borderWidth: 1, padding: 14, gap: 8 },
   suggestIcon: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
-  suggestName: { fontSize: 15 },
-  suggestDesc: { fontSize: 12, lineHeight: 18 },
   suggestMeta: { flexDirection: "row", alignItems: "center", gap: 4 },
-  suggestMetaTxt: { fontSize: 11 },
   emptyCard: { alignItems: "center", padding: 32, gap: 12 },
-  emptyTxt: { fontSize: 14, textAlign: "center" },
   workoutCard: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 14 },
   workoutLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
   workoutIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  workoutName: { fontSize: 14 },
-  workoutMeta: { fontSize: 12, marginTop: 2 },
   workoutRight: { alignItems: "flex-end" },
-  workoutCal: { fontSize: 18 },
-  workoutCalLabel: { fontSize: 11 },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "#00000060" },
-  modalSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, borderWidth: 1, gap: 16 },
+  modalSheet: { padding: 24, borderWidth: 1, gap: 16 },
   modalHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 4 },
-  modalTitle: { fontSize: 20 },
-  modalInput: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 15 },
-  modalBtn: { height: 52, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  modalBtnTxt: { fontSize: 16 },
+  modalInput: { height: 52, borderWidth: 1, paddingHorizontal: 16, fontSize: 15 },
+  modalBtn: { height: 52, alignItems: "center", justifyContent: "center" },
   modalCancel: { alignItems: "center", padding: 8 },
-  modalCancelTxt: { fontSize: 14 },
 });

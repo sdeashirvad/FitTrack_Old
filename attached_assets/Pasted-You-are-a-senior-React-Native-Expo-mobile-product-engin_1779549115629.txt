@@ -1,0 +1,484 @@
+You are a senior React Native + Expo + mobile product engineer.
+
+Your task is to COMPLETE ONLY these 2 areas of the fitness application:
+
+1. USER EXPERIENCE + PREMIUM FITNESS UI
+2. COMPLETE INBODY REPORT ANALYSIS FEATURE
+
+IMPORTANT:
+DO NOT work on:
+- OpenAI integrations
+- payment systems
+- subscriptions
+- social/community features
+- ecommerce
+- trainer marketplace backend
+- notifications
+- unrelated screens
+
+FOCUS ONLY ON:
+- premium fitness app UI
+- user experience
+- inbody report analysis flow
+- AI analysis result screens
+- user profile functionality
+- progress tracking
+- upload + OCR + Gemini flow
+
+====================================================
+FIRST STEP (VERY IMPORTANT)
+====================================================
+
+Before writing code:
+1. Analyze the entire existing codebase deeply
+2. Understand:
+   - current navigation
+   - screen structure
+   - folder structure
+   - component system
+   - theme/styling
+   - auth flow
+   - existing UI
+   - reusable components
+3. Detect what already exists
+4. Reuse existing architecture
+5. DO NOT break current working functionality
+6. DO NOT redesign unrelated parts
+
+IMPORTANT:
+- Login/logout is already completed
+- Camera opening functionality is already completed
+- Some InBody feature work already exists
+- Continue from existing progress
+- Do not rebuild from scratch
+
+====================================================
+DESIGN GOAL
+====================================================
+
+The app UI should feel like:
+- premium fitness startup
+- futuristic wellness app
+- AI-powered health platform
+- high-end mobile experience
+
+UI inspiration:
+- modern fitness mobile apps
+- Apple Health
+- Fitbit
+- Nike Training Club
+- premium glassmorphism fitness UI
+
+The UI should match the provided reference image style.
+
+====================================================
+DESIGN SYSTEM
+====================================================
+
+THEME STYLE:
+- Soft white/light gray backgrounds
+- Orange accent gradients
+- Rounded modern cards
+- Premium spacing
+- Minimal clutter
+- Smooth animations
+- Large typography
+- Modern health dashboard feel
+
+PRIMARY COLORS:
+Background: #F5F6FA
+Card: #FFFFFF
+Primary Orange: #FF8A00
+Dark Orange: #FF5E00
+Text Primary: #111827
+Text Secondary: #6B7280
+Border: #E5E7EB
+
+====================================================
+UI STYLE RULES
+====================================================
+
+Use:
+- large rounded corners (22px–30px)
+- soft shadows
+- modern floating cards
+- premium gradients
+- glassmorphism lightly
+- smooth transitions
+- blur effects where needed
+- minimal clean layouts
+- premium mobile spacing
+
+DO NOT:
+- overcrowd screens
+- use too many colors
+- use cheap gym UI styles
+- create outdated bodybuilding style UI
+- use aggressive neon colors
+
+====================================================
+TYPOGRAPHY
+====================================================
+
+Use:
+- Inter
+or
+- Poppins
+
+Typography style:
+- bold modern headings
+- large hero text
+- clean readable labels
+- elegant fitness dashboard appearance
+
+====================================================
+MAIN USER EXPERIENCE TASKS
+====================================================
+
+COMPLETE:
+- polished home screen
+- user profile
+- fitness dashboard
+- analytics cards
+- progress tracking UI
+- upload flow UI
+- AI analysis result UI
+- workout recommendation UI
+- exercise cards
+- history screens
+- report comparison screens
+
+====================================================
+HOME SCREEN REQUIREMENTS
+====================================================
+
+Create premium fitness dashboard UI similar to reference.
+
+Include:
+- welcome section
+- user fitness summary
+- progress cards
+- calories
+- workouts
+- hydration
+- body score
+- recent activity
+- quick actions
+- upload report CTA
+
+Use:
+- modern fitness analytics cards
+- progress rings
+- graphs
+- workout banners
+- carousel cards
+- animated counters
+
+IMPORTANT:
+DO NOT PUSH AI HEAVILY ON:
+- login screen
+- signup screen
+- welcome/onboarding
+
+Keep onboarding clean and fitness-focused.
+
+====================================================
+BOTTOM NAVIGATION
+====================================================
+
+Create premium floating tab bar:
+- rounded
+- blurred/glass effect
+- smooth active state
+- modern icons
+
+Tabs:
+- Home
+- Analysis
+- Workout
+- Progress
+- Profile
+
+====================================================
+INBODY FEATURE IMPLEMENTATION
+====================================================
+
+This is one of the flagship features.
+
+COMPLETE the entire InBody Report Analysis flow.
+
+====================================================
+UPLOAD FLOW
+====================================================
+
+Step 1:
+User opens:
+"InBody Analysis"
+
+Step 2:
+Show upload options:
+- Upload PDF
+- Upload Image
+- Scan using Camera
+
+Step 3:
+Preview selected report
+
+Step 4:
+Upload to backend
+
+Step 5:
+OCR extraction
+
+Step 6:
+Gemini AI analysis
+
+Step 7:
+Show premium AI summary dashboard
+
+====================================================
+OCR IMPLEMENTATION
+====================================================
+
+Use one:
+- Google Vision API
+OR
+- Tesseract OCR
+
+Extract:
+- Weight
+- BMI
+- Body Fat %
+- Skeletal Muscle Mass
+- Lean Body Mass
+- Protein
+- Water %
+- BMR
+- Visceral Fat
+- Metabolic Age
+- Waist Hip Ratio
+- Segmental Muscle
+- Segmental Fat
+
+====================================================
+GEMINI AI ANALYSIS
+====================================================
+
+Use Gemini to generate:
+- overall fitness summary
+- body composition analysis
+- strengths
+- weaknesses
+- health risks
+- muscle imbalance analysis
+- personalized recommendations
+- workout suggestions
+- diet suggestions
+- recovery suggestions
+
+====================================================
+AI RESULT SCREEN
+====================================================
+
+Build PREMIUM analytics dashboard UI.
+
+Sections:
+1. Overall Body Score
+2. Fitness Summary
+3. Body Fat Analysis
+4. Muscle Analysis
+5. Metabolism Insights
+6. AI Recommendations
+7. Recovery Insights
+8. Goal Suggestions
+
+UI REQUIREMENTS:
+- animated progress rings
+- premium charts
+- analytics cards
+- gradient sections
+- smooth transitions
+- skeleton loaders
+- glassmorphism
+- fitness dashboard feel
+
+====================================================
+TRAINER VS AI FLOW
+====================================================
+
+After AI analysis:
+show premium modal:
+
+--------------------------------
+Your Report Has Been Analyzed
+
+Choose Your Next Step:
+
+[ Get AI Plan ]
+[ Connect With Trainer ]
+--------------------------------
+
+====================================================
+IF USER CHOOSES AI PLAN
+====================================================
+
+Generate:
+- workout plan
+- diet plan
+- recovery plan
+
+Workout plan includes:
+- exercises
+- sets
+- reps
+- rest duration
+- intensity
+- weekly schedule
+
+Diet includes:
+- calories
+- protein
+- carbs
+- fats
+- Indian meal suggestions
+
+====================================================
+EXERCISE CARDS
+====================================================
+
+Every exercise card should include:
+- exercise image
+- target muscle
+- sets/reps
+- rest duration
+- difficulty
+- calories estimate
+- instructions
+- common mistakes
+
+UI:
+- premium rounded cards
+- modern fitness visuals
+- large images
+- clean spacing
+
+====================================================
+YOUTUBE INTEGRATION
+====================================================
+
+For every exercise:
+show:
+- tutorial thumbnail
+- proper form video
+- beginner tutorial
+
+Open inside app if possible.
+
+====================================================
+DATABASE TASKS
+====================================================
+
+Complete and connect:
+- inbody_reports
+- ai_fitness_analysis
+- ai_workout_plans
+- ai_diet_plans
+
+Store:
+- report URL
+- extracted text
+- extracted metrics
+- AI summary
+- recommendations
+- upload timestamp
+
+====================================================
+PROGRESS TRACKING
+====================================================
+
+Allow monthly uploads.
+
+Compare:
+- old vs new weight
+- muscle gain
+- body fat reduction
+- progress improvements
+
+Generate:
+- transformation charts
+- analytics graphs
+- visual progress cards
+
+====================================================
+LOADING EXPERIENCE
+====================================================
+
+Create premium loading states:
+- shimmer loaders
+- animated skeletons
+- progress indicators
+- smooth transitions
+
+Example:
+"Analyzing your body composition..."
+
+====================================================
+ERROR HANDLING
+====================================================
+
+Handle:
+- OCR failures
+- unsupported files
+- AI timeout
+- upload failures
+
+Show premium friendly error states.
+
+====================================================
+ANIMATION REQUIREMENTS
+====================================================
+
+Use:
+- Reanimated
+- smooth card animations
+- fade transitions
+- micro interactions
+- button press animations
+- animated progress bars
+
+Keep animations premium and subtle.
+
+====================================================
+PERFORMANCE REQUIREMENTS
+====================================================
+
+Optimize:
+- image loading
+- screen rendering
+- API calls
+- OCR processing
+- animations
+
+Avoid unnecessary re-renders.
+
+====================================================
+FINAL EXPECTATION
+====================================================
+
+The final app should feel:
+- premium
+- futuristic
+- investor-ready
+- App Store quality
+- modern AI fitness platform
+
+The InBody feature should become one of the strongest standout features of the app.
+
+MOST IMPORTANT:
+- Continue from current progress
+- Do not rebuild entire app
+- Do not break existing auth flow
+- Keep architecture scalable
+- Keep code modular
+- Reuse components
+- Maintain clean production-level structure

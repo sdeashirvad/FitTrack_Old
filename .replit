@@ -11,6 +11,27 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "FitTrack Mobile"
+
+[[workflows.workflow]]
+name = "FitTrack Mobile"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/mobile && PORT=18115 pnpm run dev"
+waitForPort = 18115
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true

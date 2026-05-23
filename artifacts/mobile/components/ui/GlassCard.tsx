@@ -1,6 +1,6 @@
 import { useColors } from "@/hooks/useColors";
 import React, { useEffect } from "react";
-import { StyleSheet, TouchableOpacity, View, ViewStyle } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View, ViewStyle } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -13,6 +13,23 @@ interface GlassCardProps {
   onPress?: () => void;
   elevated?: boolean;
   shadowLevel?: "soft" | "medium" | "strong";
+}
+
+function getShadow(level: "soft" | "medium" | "strong") {
+  if (Platform.OS === "web") {
+    const shadows = {
+      soft: "0 2px 8px rgba(0,0,0,0.06)",
+      medium: "0 4px 16px rgba(0,0,0,0.10)",
+      strong: "0 8px 24px rgba(0,0,0,0.14)",
+    };
+    return { boxShadow: shadows[level] } as any;
+  }
+  const shadows = {
+    soft: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+    medium: { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.10, shadowRadius: 16, elevation: 5 },
+    strong: { shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.14, shadowRadius: 24, elevation: 10 },
+  };
+  return shadows[level];
 }
 
 export function GlassCard({
@@ -33,12 +50,12 @@ export function GlassCard({
     opacity: opacity.value,
   }));
 
-  const shadowStyle = elevated ? colors.shadow[shadowLevel] : {};
+  const shadowStyle = elevated ? getShadow(shadowLevel) : getShadow("soft");
 
   const cardStyle = [
     styles.card,
     {
-      backgroundColor: elevated ? colors.surfaceElevated : colors.card,
+      backgroundColor: colors.card,
       borderColor: colors.border,
       borderRadius: colors.radius,
     },

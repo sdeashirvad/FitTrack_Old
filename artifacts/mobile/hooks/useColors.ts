@@ -1,16 +1,17 @@
-import { useColorScheme } from "react-native";
-
+import { Platform, useColorScheme } from "react-native";
 import colors, { type ThemeTokens } from "@/constants/colors";
 
-/**
- * Returns the design tokens for the current color scheme.
- *
- * The returned object contains all color tokens for the active palette
- * plus scheme-independent values like radius, spacing, shadow, and typography.
- *
- * Falls back to the light palette when no dark key is defined in
- * constants/colors.ts.
- */
+function makeShadows() {
+  if (Platform.OS === "web") {
+    return {
+      soft: { boxShadow: "0 2px 8px rgba(0,0,0,0.06)" } as any,
+      medium: { boxShadow: "0 4px 16px rgba(0,0,0,0.10)" } as any,
+      strong: { boxShadow: "0 8px 24px rgba(0,0,0,0.14)" } as any,
+    };
+  }
+  return colors.shadow;
+}
+
 export function useColors(): ThemeTokens {
   const scheme = useColorScheme();
   const palette =
@@ -24,7 +25,7 @@ export function useColors(): ThemeTokens {
     radiusLarge: colors.radiusLarge,
     radiusFull: colors.radiusFull,
     spacing: colors.spacing,
-    shadow: colors.shadow,
+    shadow: makeShadows(),
     typography: colors.typography,
   };
 }

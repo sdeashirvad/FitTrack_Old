@@ -2,6 +2,7 @@ import { useFitness } from "@/context/FitnessContext";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -134,11 +135,33 @@ export default function WorkoutScreen() {
   const [showModal, setShowModal] = useState(false);
   const [workoutName, setWorkoutName] = useState("");
 
+  function resolveApiHost() {
+    const hostUri =
+      typeof Constants.manifest?.debuggerHost === "string"
+        ? Constants.manifest.debuggerHost
+        : typeof Constants.expoConfig?.hostUri === "string"
+        ? Constants.expoConfig.hostUri
+        : null;
+
+    if (hostUri) {
+      const host = hostUri.includes("//")
+        ? hostUri.split("//")[1].split(":")[0]
+        : hostUri.split(":")[0];
+
+      if (Platform.OS === "android" && host === "localhost") {
+        return "10.0.2.2";
+      }
+
+      return host;
+    }
+
+    return Platform.OS === "android" ? "10.0.2.2" : "localhost";
+  }
+
   function getApiBase() {
     const EXPO_PUBLIC_DOMAIN = process.env.EXPO_PUBLIC_DOMAIN;
     if (EXPO_PUBLIC_DOMAIN) return `https://${EXPO_PUBLIC_DOMAIN}`;
-    if (Platform.OS === "android") return "http://10.0.2.2:3001";
-    return "http://localhost:3001";
+    return `http://${resolveApiHost()}:5000`;
   }
 
   // ── Check onboarding status on mount ──────────────────────────────────────

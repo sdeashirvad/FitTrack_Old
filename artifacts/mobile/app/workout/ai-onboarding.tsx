@@ -7,6 +7,7 @@
 
 import { useColors } from "@/hooks/useColors";
 import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -134,11 +135,33 @@ export default function AIWorkoutOnboarding({ onComplete, onSkip }: Props) {
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
+  function resolveApiHost() {
+    const hostUri =
+      typeof Constants.manifest?.debuggerHost === "string"
+        ? Constants.manifest.debuggerHost
+        : typeof Constants.expoConfig?.hostUri === "string"
+        ? Constants.expoConfig.hostUri
+        : null;
+
+    if (hostUri) {
+      const host = hostUri.includes("//")
+        ? hostUri.split("//")[1].split(":")[0]
+        : hostUri.split(":")[0];
+
+      if (Platform.OS === "android" && host === "localhost") {
+        return "10.0.2.2";
+      }
+
+      return host;
+    }
+
+    return Platform.OS === "android" ? "10.0.2.2" : "localhost";
+  }
+
   function getApiBase() {
     const EXPO_PUBLIC_DOMAIN = process.env.EXPO_PUBLIC_DOMAIN;
     if (EXPO_PUBLIC_DOMAIN) return `https://${EXPO_PUBLIC_DOMAIN}`;
-    if (Platform.OS === "android") return "http://10.0.2.2:3001";
-    return "http://localhost:3001";
+    return `http://${resolveApiHost()}:5000`;
   }
 
   async function apiCall(path: string, method = "GET", body?: unknown) {
@@ -272,7 +295,7 @@ export default function AIWorkoutOnboarding({ onComplete, onSkip }: Props) {
             insets={insets}
             recommendation={aiRecommendation}
             noReport={noReportFound}
-            onUseGoal={(goal) => handleGeneratePlan(goal)}
+            onUseGoal={(goal: FitnessGoal) => handleGeneratePlan(goal)}
             onChooseManually={() => transition(() => setStep("goal"))}
             onUploadReport={() => router.push("/inbody" as any)}
           />
@@ -296,8 +319,8 @@ export default function AIWorkoutOnboarding({ onComplete, onSkip }: Props) {
             plan={generatedPlan}
             expandedDay={expandedDay}
             expandedEx={expandedEx}
-            onToggleDay={(d) => setExpandedDay(expandedDay === d ? null : d)}
-            onToggleEx={(e) => setExpandedEx(expandedEx === e ? null : e)}
+            onToggleDay={(d: string) => setExpandedDay(expandedDay === d ? null : d)}
+            onToggleEx={(e: string) => setExpandedEx(expandedEx === e ? null : e)}
             onSave={handleSaveAndFinish}
             onBack={() => transition(() => setStep(aiRecommendation ? "ai-result" : "goal"))}
           />

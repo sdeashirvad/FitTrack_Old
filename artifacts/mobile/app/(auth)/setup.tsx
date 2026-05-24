@@ -219,7 +219,7 @@ export default function SetupScreen() {
       };
 
       const host = resolveApiHost();
-      const res = await fetch(`http://${host}:3001/api/auth/onboarding`, {
+      const res = await fetch(`http://${host}:5000/api/auth/onboarding`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -72,10 +72,9 @@ function resolveApiHost() {
   return Platform.OS === "android" ? "10.0.2.2" : "localhost";
 }
 
-// Server runs on port 3001 in Replit environment
 function getApiBaseUrl() {
   const host = resolveApiHost();
-  return `http://${host}:3001`;
+  return `http://${host}:5000`;
 }
 
 // ─── Fetch helper ─────────────────────────────────────────────────────────────

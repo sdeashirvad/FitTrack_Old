@@ -20,6 +20,10 @@ author = "agent"
 task = "workflow.run"
 args = "FitTrack Mobile"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "FitTrack API"
+
 [[workflows.workflow]]
 name = "FitTrack Mobile"
 author = "agent"
@@ -32,13 +36,29 @@ task = "shell.exec"
 args = "cd artifacts/mobile && PORT=18115 pnpm run dev"
 waitForPort = 18115
 
+[[workflows.workflow]]
+name = "FitTrack API"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/api-server && PORT=3001 pnpm run build && PORT=3001 pnpm run start"
+waitForPort = 3001
+
+[workflows.workflow.metadata]
+outputType = "console"
+
 [agent]
-stack = "PNPM_WORKSPACE"
+stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
 
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[[ports]]
+localPort = 3001
+externalPort = 3001
 
 [[ports]]
 localPort = 8080

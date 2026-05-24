@@ -29,7 +29,7 @@ function resolveApiHost() {
 }
 
 function getApiBaseUrl() {
-  return `http://${resolveApiHost()}:5000`;
+  return `http://${resolveApiHost()}:3001`;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────

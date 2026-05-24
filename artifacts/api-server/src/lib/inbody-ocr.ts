@@ -9,8 +9,8 @@
  *
  * Environment variables used:
  *   GROQ_API_KEY              — Used for vision extraction (reuses text-AI key)
- *   SUPABASE_URL              — Supabase project URL
- *   SUPABASE_SERVICE_ROLE_KEY — Service-role key (bypasses RLS for storage)
+ *   SUPABASE_URL              — Supabase project URL (optional for storage)
+ *   SUPABASE_SERVICE_ROLE_KEY — Service-role key (optional for storage)
  *   GOOGLE_VISION_API_KEY     — Google Cloud Vision API key (optional)
  *   OCR_SPACE_API_KEY         — OCR.space API key (fallback, optional)
  */
@@ -29,8 +29,6 @@ const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SUPABASE_SERVICE_ROLE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
 
-// Graceful fallback — operations will fail at runtime with a clear error,
-// but the server won't crash on startup if credentials aren't configured.
 const storageClient = createClient(
   SUPABASE_URL || "https://placeholder.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY || "placeholder-service-key",
@@ -73,9 +71,6 @@ export async function uploadToStorage(
 }
 
 // ─── Groq Vision Extraction ────────────────────────────────────────────────────
-// Uses the same GROQ_API_KEY already configured for text AI.
-// Sends the InBody image directly to a vision model which understands the
-// two-column report layout that confuses text-based OCR engines.
 async function runGroqVisionExtraction(
   fileBuffer: Buffer,
   mimeType: string,
@@ -87,16 +82,22 @@ async function runGroqVisionExtraction(
   const groq = new Groq({ apiKey: GROQ_KEY });
   const base64 = fileBuffer.toString("base64");
 
-  const VISION_PROMPT = `This is an InBody body composition report. Extract EVERY numeric metric you can read.
+  const VISION_PROMPT = `This is a professional InBody body composition analysis report. Extract EVERY numeric metric you can find — read all sections carefully including Body Composition Analysis, Muscle-Fat Analysis, Obesity Analysis, Weight Control, Research Parameters, and any other sections.
 
-CRITICAL RULES:
-- "weight" = total body weight in kg (the large number, e.g. 109.6 kg)
-- "bodyFat" = PBF percent body fat (e.g. 41.5), NOT body fat mass in kg
-- "visceralFat" = visceral fat LEVEL number (e.g. 22)
-- "bmr" = Basal Metabolic Rate in kcal (e.g. 1756)
-- "inbodyScore" = the score out of 100 (e.g. 49)
-- All values must be numeric strings (e.g. "109.6") or null if not found
-- Do NOT confuse body fat mass (kg) with percent body fat (%)
+CRITICAL DISAMBIGUATION RULES:
+- "weight" = TOTAL body weight in kg (e.g. 109.6 kg) — the large number at top
+- "bodyFat" = PBF percent body fat (%) — e.g. 41.5 — NOT body fat mass in kg
+- "bodyFatMass" = body fat mass in kg — e.g. 45.4 kg
+- "visceralFat" = visceral fat LEVEL number (1-20 scale) — e.g. 22
+- "bmr" = Basal Metabolic Rate in kcal — e.g. 1756
+- "inbodyScore" = score out of 100 — e.g. 49
+- "metabolicAge" = metabolic age in years — could be very high (e.g. 154)
+- "obesityDegree" = obesity degree percentage — e.g. 154
+- "waistHipRatio" = waist-hip ratio decimal — e.g. 1.14
+- "weightControl" = weight to lose (negative) or gain — e.g. -34.1
+- "fatControl" = fat to lose (negative) or gain — e.g. -34.1
+- "muscleControl" = muscle to gain (positive) or lose — e.g. 0.0
+- All values must be numeric strings or null if not clearly readable
 
 Return ONLY valid JSON — no markdown, no explanation:
 {
@@ -106,18 +107,28 @@ Return ONLY valid JSON — no markdown, no explanation:
   "gender": null,
   "bmi": null,
   "bodyFat": null,
+  "bodyFatMass": null,
   "skeletalMuscleMass": null,
   "leanBodyMass": null,
+  "fatFreeMass": null,
+  "softLeanMass": null,
   "protein": null,
+  "mineral": null,
   "bodyWater": null,
   "bmr": null,
   "visceralFat": null,
   "metabolicAge": null,
   "waistHipRatio": null,
+  "obesityDegree": null,
+  "recommendedCalorieIntake": null,
+  "targetWeight": null,
+  "weightControl": null,
+  "fatControl": null,
+  "muscleControl": null,
+  "smi": null,
   "inbodyScore": null
 }`;
 
-  // Try primary vision model, fall back to secondary
   const VISION_MODELS = [
     "meta-llama/llama-4-scout-17b-16e-instruct",
     "llama-3.2-90b-vision-preview",
@@ -142,7 +153,7 @@ Return ONLY valid JSON — no markdown, no explanation:
           },
         ],
         temperature: 0.1,
-        max_tokens: 500,
+        max_tokens: 800,
         response_format: { type: "json_object" },
       });
       content = response.choices[0]?.message?.content ?? "";
@@ -164,26 +175,44 @@ Return ONLY valid JSON — no markdown, no explanation:
 
   const toStr = (v: string | null | undefined): string | undefined => {
     if (!v || v === "null" || v === "N/A" || v === "n/a") return undefined;
-    const cleaned = String(v).replace(/[^\d.]/g, "");
-    return cleaned && /^\d/.test(cleaned) ? cleaned : undefined;
+    // Allow negative numbers (weightControl, fatControl can be negative)
+    const cleaned = String(v).replace(/[^\d.\-]/g, "").replace(/(?<=.)-/g, "");
+    return cleaned && /^-?\d/.test(cleaned) ? cleaned : undefined;
+  };
+
+  const toGender = (v: string | null | undefined): string | undefined => {
+    if (!v || v === "null") return undefined;
+    const g = String(v).toLowerCase().trim();
+    return g === "male" || g === "female" ? g : undefined;
   };
 
   const metrics: ExtractedInBodyMetrics = {
     weight: toStr(parsed.weight),
     bmi: toStr(parsed.bmi),
     bodyFat: toStr(parsed.bodyFat),
+    bodyFatMass: toStr(parsed.bodyFatMass),
     skeletalMuscleMass: toStr(parsed.skeletalMuscleMass),
     leanBodyMass: toStr(parsed.leanBodyMass),
+    fatFreeMass: toStr(parsed.fatFreeMass) ?? toStr(parsed.leanBodyMass),
+    softLeanMass: toStr(parsed.softLeanMass),
     protein: toStr(parsed.protein),
+    mineral: toStr(parsed.mineral),
     bodyWater: toStr(parsed.bodyWater),
     bmr: toStr(parsed.bmr),
     visceralFat: toStr(parsed.visceralFat),
     metabolicAge: toStr(parsed.metabolicAge),
     waistHipRatio: toStr(parsed.waistHipRatio),
+    obesityDegree: toStr(parsed.obesityDegree),
+    recommendedCalorieIntake: toStr(parsed.recommendedCalorieIntake),
+    targetWeight: toStr(parsed.targetWeight),
+    weightControl: toStr(parsed.weightControl),
+    fatControl: toStr(parsed.fatControl),
+    muscleControl: toStr(parsed.muscleControl),
+    smi: toStr(parsed.smi),
     inbodyScore: toStr(parsed.inbodyScore),
     height: toStr(parsed.height),
     age: toStr(parsed.age),
-    gender: parsed.gender && parsed.gender !== "null" ? parsed.gender : undefined,
+    gender: toGender(parsed.gender),
   };
 
   // Remove undefined keys
@@ -191,22 +220,32 @@ Return ONLY valid JSON — no markdown, no explanation:
     Object.entries(metrics).filter(([, v]) => v !== undefined),
   ) as ExtractedInBodyMetrics;
 
-  // Build a clean synthetic text for AI context
   const labelMap: Record<string, string> = {
-    weight: "Weight",
-    height: "Height",
+    weight: "Weight (kg)",
+    height: "Height (cm)",
     age: "Age",
     gender: "Gender",
     bmi: "BMI",
     bodyFat: "Body Fat %",
-    skeletalMuscleMass: "Skeletal Muscle Mass",
-    leanBodyMass: "Lean Body Mass",
-    protein: "Protein",
-    bodyWater: "Body Water",
-    bmr: "BMR",
+    bodyFatMass: "Body Fat Mass (kg)",
+    skeletalMuscleMass: "Skeletal Muscle Mass (kg)",
+    leanBodyMass: "Lean Body Mass (kg)",
+    fatFreeMass: "Fat Free Mass (kg)",
+    softLeanMass: "Soft Lean Mass (kg)",
+    protein: "Protein (kg)",
+    mineral: "Mineral (kg)",
+    bodyWater: "Total Body Water (L)",
+    bmr: "BMR (kcal)",
     visceralFat: "Visceral Fat Level",
-    metabolicAge: "Metabolic Age",
+    metabolicAge: "Metabolic Age (yr)",
     waistHipRatio: "Waist-Hip Ratio",
+    obesityDegree: "Obesity Degree (%)",
+    recommendedCalorieIntake: "Recommended Calorie Intake (kcal)",
+    targetWeight: "Target Weight (kg)",
+    weightControl: "Weight Control (kg)",
+    fatControl: "Fat Control (kg)",
+    muscleControl: "Muscle Control (kg)",
+    smi: "SMI (kg/m²)",
     inbodyScore: "InBody Score",
   };
 
@@ -280,7 +319,7 @@ async function runOCRSpaceFallback(
   form.append("isOverlayRequired", "false");
   form.append("detectOrientation", "true");
   form.append("scale", "true");
-  form.append("OCREngine", "2"); // Engine 2 handles complex layouts better
+  form.append("OCREngine", "2");
 
   const response = await fetch("https://api.ocr.space/parse/image", {
     method: "POST",
@@ -312,7 +351,6 @@ export async function runOCR(
 ): Promise<{ rawText: string; metrics: ExtractedInBodyMetrics }> {
 
   // ── Attempt 1: Groq Vision (images only) ─────────────────────────────────
-  // Most accurate for InBody reports — understands the two-column layout
   if (!mimeType.includes("pdf") && process.env.GROQ_API_KEY) {
     try {
       logger.info("Attempting Groq Vision extraction");
@@ -320,7 +358,6 @@ export async function runOCR(
       const metricCount = Object.keys(result.metrics).length;
       logger.info({ metricCount }, "Groq Vision extraction complete");
 
-      // Accept if we got at least 4 core metrics
       if (metricCount >= 4) {
         return result;
       }
@@ -366,18 +403,44 @@ export async function runOCR(
 // ─── Demo stub for development without API keys ───────────────────────────────
 function getDemoOCRText(): string {
   return `
-InBody 770 Result Sheet
-Height: 175 cm  Age: 28  Gender: Male
-Weight: 78.4 kg
-BMI: 25.6
-Percent Body Fat (PBF): 22.1
-Skeletal Muscle Mass: 33.8 kg
-Lean Body Mass: 61.1 kg
-Protein: 12.4 kg
-Body Water: 51.2 L
-Basal Metabolic Rate (BMR): 1680 kcal
-Visceral Fat Level: 8
-Waist-Hip Ratio: 0.86
-InBody Score: 72/100
+InBody 260 Result Sheet
+Height: 180 cm  Age: 22  Gender: Male
+Test Date: 2026.05.04
+
+Body Composition Analysis
+Total Body Water (L): 46.9
+Protein (kg): 12.6
+Mineral (kg): 4.67
+Body Fat Mass (kg): 45.4
+Weight (kg): 109.6
+
+Muscle-Fat Analysis
+Weight (kg): 109.6
+Skeletal Muscle Mass (kg): 36.2
+Body Fat Mass (kg): 45.4
+
+Obesity Analysis
+BMI (kg/m2): 33.8
+PBF (%): 41.5
+
+InBody Score: 49/100
+
+Weight Control
+Target Weight: 75.5 kg
+Weight Control: -34.1 kg
+Fat Control: -34.1 kg
+Muscle Control: 0.0 kg
+
+Research Parameters
+Fat Free Mass: 64.2 kg
+Basal Metabolic Rate (BMR): 1756 kcal
+Obesity Degree: 154 %
+SMI: 8.5 kg/m2
+
+Visceral Fat Level: 22
+
+Waist-Hip Ratio: 1.14
+
+Recommended calorie intake: 2966 kcal
   `.trim();
 }

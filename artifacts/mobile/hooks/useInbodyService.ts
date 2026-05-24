@@ -37,14 +37,25 @@ export interface InBodyMetrics {
   weight?: string;
   bmi?: string;
   bodyFat?: string;
+  bodyFatMass?: string;
   skeletalMuscleMass?: string;
   leanBodyMass?: string;
+  fatFreeMass?: string;
+  softLeanMass?: string;
   protein?: string;
+  mineral?: string;
   bodyWater?: string;
   bmr?: string;
   visceralFat?: string;
   metabolicAge?: string;
   waistHipRatio?: string;
+  obesityDegree?: string;
+  recommendedCalorieIntake?: string;
+  targetWeight?: string;
+  weightControl?: string;
+  fatControl?: string;
+  muscleControl?: string;
+  smi?: string;
 }
 
 export interface UploadResponse {

@@ -41,85 +41,145 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MetricBig from "./components/MetricBig";
 import AnalysisSection from "./components/AnalysisSection";
-import { parseGeminiAnalysis, getRating } from "./helpers";
+import { parseGeminiAnalysis, getRating, safeNum, formatControl } from "./helpers";
 import type { GeminiAnalysis, ExtractedMetrics, Phase, PlanType, SelectedFile } from "./types";
 
 const DEMO_METRICS: ExtractedMetrics = {
-  weight: "78.2",
-  bmi: "24.1",
-  bodyFat: "18.4",
-  skeletalMuscleMass: "32.8",
-  leanBodyMass: "63.8",
-  protein: "12.2",
-  bodyWater: "38.6",
-  bmr: "1780",
-  visceralFat: "7",
-  metabolicAge: "29",
-  waistHipRatio: "0.84",
+  weight: "109.6",
+  height: "180",
+  age: "22",
+  gender: "male",
+  bmi: "33.8",
+  bodyFat: "41.5",
+  bodyFatMass: "45.4",
+  skeletalMuscleMass: "36.2",
+  leanBodyMass: "64.2",
+  fatFreeMass: "64.2",
+  softLeanMass: "60.3",
+  protein: "12.6",
+  mineral: "4.67",
+  bodyWater: "46.9",
+  bmr: "1756",
+  visceralFat: "22",
+  metabolicAge: "154",
+  waistHipRatio: "1.14",
+  obesityDegree: "154",
+  recommendedCalorieIntake: "2966",
+  targetWeight: "75.5",
+  weightControl: "-34.1",
+  fatControl: "-34.1",
+  muscleControl: "0.0",
+  smi: "8.5",
+  inbodyScore: "49",
 };
 
 const DEMO_ANALYSIS: GeminiAnalysis = {
-  overallSummary: "Your body composition shows good overall fitness with room to optimize body fat levels. Skeletal muscle mass is above average, reflecting consistent training. Continue your current program with focus on progressive overload and slight caloric deficit.",
-  fitnessLevel: "Intermediate",
+  overallSummary: "Body composition indicates significant health concerns with 41.5% body fat and visceral fat level 22/20. Priority is structured fat loss while preserving skeletal muscle mass of 36.2 kg. Metabolic age of 154 years signals urgent need for lifestyle intervention.",
+  fitnessLevel: "Needs Attention",
   bodyFatAnalysis: {
-    status: "Slightly High",
-    description: "At 18.4% body fat, you're in the acceptable range for your age. Targeting 15–17% would significantly improve body composition and athletic performance.",
-    recommendation: "Prioritise protein intake and add 2–3 HIIT sessions per week.",
+    status: "Severely High",
+    description: "At 41.5% body fat, you are in the severely obese range. This significantly elevates risk for cardiovascular disease, diabetes, and metabolic syndrome.",
+    recommendation: "Combine a 600 kcal daily deficit with strength training 4x weekly and 150+ minutes of cardio per week.",
+    idealRange: "Male: 10-20% | Female: 18-28%",
   },
   muscleMassAnalysis: {
-    status: "Above Average",
-    description: "Skeletal muscle mass of 32.8 kg is above the average for your age and height. This indicates consistent resistance training.",
-    recommendation: "Continue progressive overload with compound movements. Prioritise recovery to maintain muscle.",
+    status: "Below Average",
+    description: "Skeletal muscle mass of 36.2 kg needs improvement relative to body weight of 109.6 kg. Low muscle-to-fat ratio creates an unfavourable body composition.",
+    recommendation: "Progressive resistance training with compound lifts (squats, deadlifts, rows) 4x weekly. Aim for 2g protein per kg body weight.",
+    idealRange: "Male: 33-39 kg | Female: 21-27 kg",
   },
   metabolismInsights: {
-    bmr: "1780",
-    metabolicAge: "29",
-    description: "Basal metabolic rate is healthy. Metabolic age of 29 suggests good metabolic health.",
+    bmr: "1756",
+    metabolicAge: "154",
+    description: "BMR of 1756 kcal supports daily energy needs. Metabolic age of 154 yr is severely above actual age of 22, indicating critical metabolic dysfunction driven by excess body fat.",
+    recommendation: "Build muscle mass to increase BMR. Every kg of muscle adds ~13 kcal/day to resting metabolism.",
   },
   visceralFatAnalysis: {
-    level: "7",
-    risk: "Low",
-    recommendation: "Visceral fat is within the healthy range. Maintain with regular cardio and controlled sugar intake.",
+    level: "22",
+    risk: "Very High",
+    recommendation: "Visceral fat level 22 is critically high. Prioritise cardio (minimum 150 min/week), reduce sugar intake, and consider intermittent fasting to accelerate visceral fat reduction.",
+    whrImplication: "WHR of 1.14 indicates severe central obesity with very high cardiovascular risk. Central fat distribution is the most dangerous type and a key driver of metabolic disease.",
+  },
+  bodyCompositionAnalysis: {
+    hydrationStatus: "Within Range",
+    proteinStatus: "Adequate",
+    mineralStatus: "Within Range",
+    description: "Total body water of 46.9L, protein 12.6 kg, and mineral 4.67 kg indicate adequate hydration and nutrient stores despite excess body fat of 45.4 kg.",
+    recommendation: "Maintain hydration at 3+ litres/day. Increase dietary protein to 2g/kg to protect muscle during fat loss. Ensure adequate calcium and vitamin D for mineral density.",
+  },
+  obesityAnalysis: {
+    bmiStatus: "Obese",
+    pbfStatus: "Severely High",
+    obesityDegreeInterpretation: "Obesity degree of 154% indicates body fat exceeds ideal by 54% — severe obesity classification.",
+    riskLevel: "Very High",
+    description: "BMI of 33.8 (Obese) combined with 41.5% body fat places you at very high risk for type 2 diabetes, hypertension, sleep apnea, and cardiovascular disease.",
+    recommendation: "Target 0.5-1 kg weight loss per week through combined diet and exercise. Avoid crash diets which accelerate muscle loss.",
+  },
+  weightControlAnalysis: {
+    targetWeight: "75.5",
+    estimatedWeightToLose: "34.1",
+    estimatedFatToLose: "34.1",
+    timeline: "34-68 weeks at 0.5-1 kg/week",
+    strategy: "Structured caloric deficit of 500-750 kcal/day combined with progressive resistance training to preserve lean mass while losing fat.",
+  },
+  metabolicHealthAnalysis: {
+    description: "Metabolic profile shows severe dysfunction with BMR of 1756 kcal and metabolic age 132 years above chronological age. This indicates critical metabolic impairment driven by excess adipose tissue.",
+    bmrInterpretation: "BMR of 1756 kcal is moderate for body weight. Building muscle will increase this figure, making long-term weight maintenance significantly easier.",
+    metabolicAgeInterpretation: "Metabolic age of 154 yr vs actual age 22 suggests the body's internal systems are severely aged. Every 1 kg of fat lost and muscle gained will help reverse this rapidly.",
+    recommendation: "Combine resistance training with adequate sleep (7-8 hours) and stress management to optimise hormone levels and metabolic function.",
+  },
+  recompositionGoals: {
+    shortTerm: "4-8 weeks: Lose 4-8 kg fat, establish consistent training habit, reduce visceral fat from 22 toward 18",
+    mediumTerm: "3-6 months: Reduce body fat to below 30%, reach approximately 90 kg, improve metabolic age by 50+ years",
+    longTerm: "6-12 months: Reach target weight 75.5 kg, body fat below 20%, visceral fat below 10, metabolic age aligned with actual age",
   },
   strengths: [
-    "Above-average skeletal muscle mass",
-    "Healthy visceral fat level (7/20)",
-    "Good metabolic age (29 years)",
-    "Strong lean body mass ratio",
+    "Skeletal muscle mass of 36.2 kg provides metabolic foundation",
+    "Body water 46.9L indicates adequate hydration",
+    "Protein and mineral levels within acceptable range",
   ],
   weaknesses: [
-    "Body fat slightly above optimal range",
-    "Body water percentage can improve with better hydration",
-    "Protein mass could improve with nutrition optimisation",
+    "Body fat at 41.5% — severely high classification",
+    "Visceral fat level 22 — critically dangerous cardiovascular risk",
+    "Metabolic age 154 yr — 132 years above chronological age",
+    "BMI 33.8 — obese classification",
+    "WHR 1.14 — severe central obesity",
   ],
   healthRisks: [
-    "Mild cardiovascular risk if body fat is not reduced",
-    "Risk of muscle loss during aggressive cutting without adequate protein",
+    "Very high risk of type 2 diabetes due to critical visceral fat",
+    "High cardiovascular disease risk from central obesity and WHR 1.14",
+    "Sleep apnea risk associated with severe BMI and visceral fat",
+    "Metabolic syndrome — multiple risk factors present simultaneously",
+    "Joint stress and mobility limitations from excess body weight",
   ],
   recommendations: [
-    "Prioritise 1.8–2.2g protein per kg body weight",
-    "Add 2x HIIT sessions per week",
-    "Drink 3+ litres of water daily",
-    "Sleep 7–9 hours for optimal recovery and hormonal balance",
+    "Create 500-750 kcal daily deficit targeting 34.1 kg total fat loss",
+    "Strength train 4x weekly with progressive overload to protect and build muscle",
+    "150+ minutes moderate cardio per week (brisk walking, cycling, swimming)",
+    "Consume 196-240g protein daily (2g/kg body weight)",
+    "Reduce refined carbohydrates, sugar, and processed foods",
+    "Monitor visceral fat with monthly InBody scans",
   ],
   workoutPlan: {
-    goal: "Fat Loss + Muscle Retention",
-    planType: "PPL + Cardio",
+    goal: "Fat Loss + Muscle Preservation",
+    planType: "Recomposition",
     weeklySchedule: [
-      { day: "Monday", focus: "Push", duration: "55 min", exercises: ["Bench Press", "OHP", "Incline DB", "Tricep Pushdown"] },
-      { day: "Tuesday", focus: "Pull", duration: "55 min", exercises: ["Pull-ups", "Barbell Row", "Face Pulls", "Hammer Curls"] },
-      { day: "Wednesday", focus: "HIIT Cardio", duration: "25 min", exercises: ["Jump Rope", "Burpees", "Sprint Intervals"] },
-      { day: "Thursday", focus: "Legs", duration: "60 min", exercises: ["Squats", "Romanian DL", "Leg Press", "Calf Raises"] },
-      { day: "Friday", focus: "Push + Core", duration: "55 min", exercises: ["DB Shoulder Press", "Cable Flyes", "Planks", "Ab Wheel"] },
-      { day: "Saturday", focus: "Active Recovery", duration: "40 min", exercises: ["Brisk walk", "Stretching"] },
+      { day: "Monday", focus: "Lower Body Strength", duration: "60 min", exercises: ["Squats", "Leg Press", "Romanian Deadlift", "Calf Raises"] },
+      { day: "Tuesday", focus: "Cardio — Moderate", duration: "45 min", exercises: ["Brisk Walk / Cycle", "Incline Treadmill"] },
+      { day: "Wednesday", focus: "Upper Body Push", duration: "55 min", exercises: ["Chest Press", "Shoulder Press", "Tricep Extension", "Cable Flyes"] },
+      { day: "Thursday", focus: "HIIT + Core", duration: "35 min", exercises: ["Burpees", "Mountain Climbers", "Planks", "Jump Rope"] },
+      { day: "Friday", focus: "Upper Body Pull", duration: "55 min", exercises: ["Lat Pulldown", "Cable Row", "Face Pulls", "Bicep Curls"] },
+      { day: "Saturday", focus: "Active Recovery", duration: "30 min", exercises: ["Yoga", "Light Walk", "Stretching"] },
       { day: "Sunday", focus: "Rest", duration: "—" },
     ],
-    cardioRecommendation: "2x HIIT (20–25 min) + 1x steady state (30 min walk) per week",
+    cardioRecommendation: "3x weekly: 2x moderate-intensity (40-45 min brisk walk/cycle) + 1x HIIT (25-30 min). Prioritise low-impact initially to protect joints.",
   },
   goalSuggestions: [
-    "Reach 15% body fat in 8–10 weeks",
-    "Increase skeletal muscle to 34 kg",
-    "Improve metabolic age to 27",
+    "Reach target weight of 75.5 kg over 34-68 weeks",
+    "Reduce body fat to below 20% through structured recomposition",
+    "Lower visceral fat level to safe range (below 10)",
+    "Improve metabolic age by 130+ years through fat loss and muscle gain",
+    "Achieve BMI below 25 (Normal range)",
   ],
 };
 
@@ -691,7 +751,7 @@ export default function InBodyScreen() {
               />
             </View>
 
-            {/* Secondary metrics */}
+            {/* Secondary metrics row 1 */}
             <View style={styles.secMetricsRow}>
               {[
                 { label: "Muscle Mass", value: displayMuscleMass, unit: displayMuscleMassUnit, color: colors.green },
@@ -709,6 +769,78 @@ export default function InBodyScreen() {
                 </GlassCard>
               ))}
             </View>
+
+            {/* Extended metrics row 2 — body composition detail */}
+            {(metrics.bodyFatMass || metrics.fatFreeMass || metrics.waistHipRatio || metrics.bodyWater) && (
+              <View style={styles.secMetricsRow}>
+                {[
+                  metrics.bodyFatMass ? { label: "Fat Mass", value: metrics.bodyFatMass, unit: "kg", color: colors.red } : null,
+                  metrics.fatFreeMass ? { label: "Fat Free", value: metrics.fatFreeMass, unit: "kg", color: colors.green } : null,
+                  metrics.waistHipRatio ? { label: "WHR", value: metrics.waistHipRatio, unit: "", color: colors.orange } : null,
+                  metrics.bodyWater ? { label: "Body Water", value: metrics.bodyWater, unit: "L", color: colors.cyan } : null,
+                ].filter(Boolean).slice(0, 4).map((m) => m && (
+                  <GlassCard key={m.label} style={styles.secMetricCard}>
+                    <Text style={[colors.typography.h3, { color: m.color, fontSize: 18 }]}>{m.value}{m.unit}</Text>
+                    <Text style={[colors.typography.tiny, { color: colors.mutedForeground, textAlign: "center" }]}>{m.label}</Text>
+                  </GlassCard>
+                ))}
+              </View>
+            )}
+
+            {/* Extended metrics row 3 — protein, mineral, recommended calories, obesity */}
+            {(metrics.protein || metrics.mineral || metrics.recommendedCalorieIntake || metrics.obesityDegree) && (
+              <View style={styles.secMetricsRow}>
+                {[
+                  metrics.protein ? { label: "Protein", value: metrics.protein, unit: "kg", color: colors.primary } : null,
+                  metrics.mineral ? { label: "Mineral", value: metrics.mineral, unit: "kg", color: colors.cyan } : null,
+                  metrics.recommendedCalorieIntake ? { label: "Rec. kcal", value: metrics.recommendedCalorieIntake, unit: "", color: colors.orange } : null,
+                  metrics.obesityDegree ? { label: "Obesity °", value: metrics.obesityDegree, unit: "%", color: colors.red } : null,
+                ].filter(Boolean).slice(0, 4).map((m) => m && (
+                  <GlassCard key={m.label} style={styles.secMetricCard}>
+                    <Text style={[colors.typography.h3, { color: m.color, fontSize: 16 }]}>{m.value}{m.unit}</Text>
+                    <Text style={[colors.typography.tiny, { color: colors.mutedForeground, textAlign: "center" }]}>{m.label}</Text>
+                  </GlassCard>
+                ))}
+              </View>
+            )}
+
+            {/* Weight Control row */}
+            {(metrics.targetWeight || metrics.weightControl || metrics.fatControl) && (
+              <GlassCard style={{ padding: 14, gap: 10, overflow: "hidden" }}>
+                <View style={[styles.analysisHeader, { marginBottom: 4 }]}>
+                  <View style={[styles.analysisIconWrap, { backgroundColor: colors.primary + "18" }]}>
+                    <Ionicons name="trending-down" size={18} color={colors.primary} />
+                  </View>
+                  <Text style={[colors.typography.h3, { color: colors.foreground }]}>Weight Control Target</Text>
+                </View>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                  {metrics.targetWeight && (
+                    <View style={[styles.metaChipLarge, { backgroundColor: colors.primary + "14" }]}>
+                      <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>TARGET WEIGHT</Text>
+                      <Text style={[colors.typography.bodyMedium, { color: colors.primary, fontWeight: "700" }]}>{metrics.targetWeight} kg</Text>
+                    </View>
+                  )}
+                  {metrics.weightControl && (
+                    <View style={[styles.metaChipLarge, { backgroundColor: colors.orange + "14" }]}>
+                      <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>WEIGHT TO LOSE</Text>
+                      <Text style={[colors.typography.bodyMedium, { color: colors.orange, fontWeight: "700" }]}>{formatControl(metrics.weightControl)}</Text>
+                    </View>
+                  )}
+                  {metrics.fatControl && (
+                    <View style={[styles.metaChipLarge, { backgroundColor: colors.red + "12" }]}>
+                      <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>FAT TO LOSE</Text>
+                      <Text style={[colors.typography.bodyMedium, { color: colors.red, fontWeight: "700" }]}>{formatControl(metrics.fatControl)}</Text>
+                    </View>
+                  )}
+                  {metrics.muscleControl && (
+                    <View style={[styles.metaChipLarge, { backgroundColor: colors.green + "12" }]}>
+                      <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>MUSCLE GOAL</Text>
+                      <Text style={[colors.typography.bodyMedium, { color: colors.green, fontWeight: "700" }]}>{formatControl(metrics.muscleControl)}</Text>
+                    </View>
+                  )}
+                </View>
+              </GlassCard>
+            )}
             {/* AI Summary */}
             {geminiAnalysis && (
               <>
@@ -839,6 +971,228 @@ export default function InBodyScreen() {
                     </View>
                   ))}
                 </GlassCard>
+
+                {/* Body Composition Analysis */}
+                {geminiAnalysis.bodyCompositionAnalysis && (
+                  <GlassCard style={styles.analysisCard}>
+                    <View style={styles.analysisHeader}>
+                      <View style={[styles.analysisIconWrap, { backgroundColor: colors.cyan + "18" }]}>
+                        <Ionicons name="water" size={18} color={colors.cyan} />
+                      </View>
+                      <Text style={[colors.typography.h3, { color: colors.foreground }]}>Body Composition</Text>
+                    </View>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                      {[
+                        { label: "HYDRATION", value: geminiAnalysis.bodyCompositionAnalysis.hydrationStatus },
+                        { label: "PROTEIN", value: geminiAnalysis.bodyCompositionAnalysis.proteinStatus },
+                        { label: "MINERAL", value: geminiAnalysis.bodyCompositionAnalysis.mineralStatus },
+                      ].filter(m => m.value).map((m) => (
+                        <View key={m.label} style={[styles.metaChipLarge, { backgroundColor: colors.muted }]}>
+                          <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>{m.label}</Text>
+                          <Text style={[colors.typography.caption, { color: colors.foreground, fontWeight: "600" }]}>{m.value}</Text>
+                        </View>
+                      ))}
+                    </View>
+                    <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
+                      {geminiAnalysis.bodyCompositionAnalysis.description}
+                    </Text>
+                    <View style={[styles.recoBox, { backgroundColor: colors.cyan + "10", borderLeftColor: colors.cyan }]}>
+                      <Ionicons name="bulb-outline" size={13} color={colors.cyan} />
+                      <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1 }]}>
+                        {geminiAnalysis.bodyCompositionAnalysis.recommendation}
+                      </Text>
+                    </View>
+                  </GlassCard>
+                )}
+
+                {/* Obesity Analysis */}
+                {geminiAnalysis.obesityAnalysis && (
+                  <GlassCard style={styles.analysisCard}>
+                    <View style={styles.analysisHeader}>
+                      <View style={[styles.analysisIconWrap, { backgroundColor: colors.red + "18" }]}>
+                        <Ionicons name="warning" size={18} color={colors.red} />
+                      </View>
+                      <Text style={[colors.typography.h3, { color: colors.foreground, flex: 1 }]}>Obesity Analysis</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: geminiAnalysis.obesityAnalysis.riskLevel === "Very High" ? colors.red + "18" : geminiAnalysis.obesityAnalysis.riskLevel === "High" ? colors.orange + "18" : colors.green + "18" }]}>
+                        <Text style={[colors.typography.label, { color: geminiAnalysis.obesityAnalysis.riskLevel === "Very High" ? colors.red : geminiAnalysis.obesityAnalysis.riskLevel === "High" ? colors.orange : colors.green, fontSize: 10 }]}>
+                          {geminiAnalysis.obesityAnalysis.riskLevel} RISK
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                      {[
+                        { label: "BMI STATUS", value: geminiAnalysis.obesityAnalysis.bmiStatus },
+                        { label: "BODY FAT STATUS", value: geminiAnalysis.obesityAnalysis.pbfStatus },
+                      ].filter(m => m.value).map((m) => (
+                        <View key={m.label} style={[styles.metaChipLarge, { backgroundColor: colors.muted }]}>
+                          <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>{m.label}</Text>
+                          <Text style={[colors.typography.caption, { color: colors.foreground, fontWeight: "600" }]}>{m.value}</Text>
+                        </View>
+                      ))}
+                    </View>
+                    {geminiAnalysis.obesityAnalysis.obesityDegreeInterpretation ? (
+                      <Text style={[colors.typography.caption, { color: colors.mutedForeground, fontStyle: "italic" }]}>
+                        {geminiAnalysis.obesityAnalysis.obesityDegreeInterpretation}
+                      </Text>
+                    ) : null}
+                    <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
+                      {geminiAnalysis.obesityAnalysis.description}
+                    </Text>
+                    <View style={[styles.recoBox, { backgroundColor: colors.orange + "10", borderLeftColor: colors.orange }]}>
+                      <Ionicons name="bulb-outline" size={13} color={colors.orange} />
+                      <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1 }]}>
+                        {geminiAnalysis.obesityAnalysis.recommendation}
+                      </Text>
+                    </View>
+                  </GlassCard>
+                )}
+
+                {/* Weight Control (AI version with strategy) */}
+                {geminiAnalysis.weightControlAnalysis && (
+                  <GlassCard style={styles.analysisCard}>
+                    <View style={styles.analysisHeader}>
+                      <View style={[styles.analysisIconWrap, { backgroundColor: colors.primary + "18" }]}>
+                        <Ionicons name="trending-down" size={18} color={colors.primary} />
+                      </View>
+                      <Text style={[colors.typography.h3, { color: colors.foreground }]}>Weight Control Plan</Text>
+                    </View>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                      {geminiAnalysis.weightControlAnalysis.targetWeight ? (
+                        <View style={[styles.metaChipLarge, { backgroundColor: colors.primary + "14" }]}>
+                          <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>TARGET</Text>
+                          <Text style={[colors.typography.bodyMedium, { color: colors.primary, fontWeight: "700" }]}>{geminiAnalysis.weightControlAnalysis.targetWeight} kg</Text>
+                        </View>
+                      ) : null}
+                      {geminiAnalysis.weightControlAnalysis.estimatedWeightToLose ? (
+                        <View style={[styles.metaChipLarge, { backgroundColor: colors.orange + "14" }]}>
+                          <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>TO LOSE</Text>
+                          <Text style={[colors.typography.bodyMedium, { color: colors.orange, fontWeight: "700" }]}>{geminiAnalysis.weightControlAnalysis.estimatedWeightToLose} kg</Text>
+                        </View>
+                      ) : null}
+                      {geminiAnalysis.weightControlAnalysis.timeline ? (
+                        <View style={[styles.metaChipLarge, { backgroundColor: colors.muted, flex: 1, minWidth: "100%" }]}>
+                          <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>TIMELINE</Text>
+                          <Text style={[colors.typography.caption, { color: colors.foreground }]}>{geminiAnalysis.weightControlAnalysis.timeline}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    {geminiAnalysis.weightControlAnalysis.strategy ? (
+                      <Text style={[colors.typography.caption, { color: colors.mutedForeground, lineHeight: 20 }]}>
+                        {geminiAnalysis.weightControlAnalysis.strategy}
+                      </Text>
+                    ) : null}
+                  </GlassCard>
+                )}
+
+                {/* Metabolic Health Analysis */}
+                {geminiAnalysis.metabolicHealthAnalysis && (
+                  <GlassCard style={styles.analysisCard}>
+                    <View style={styles.analysisHeader}>
+                      <View style={[styles.analysisIconWrap, { backgroundColor: colors.orange + "18" }]}>
+                        <Ionicons name="flame" size={18} color={colors.orange} />
+                      </View>
+                      <Text style={[colors.typography.h3, { color: colors.foreground }]}>Metabolic Health</Text>
+                    </View>
+                    <Text style={[colors.typography.caption, { color: colors.mutedForeground, lineHeight: 20 }]}>
+                      {geminiAnalysis.metabolicHealthAnalysis.description}
+                    </Text>
+                    <View style={{ gap: 8 }}>
+                      {geminiAnalysis.metabolicHealthAnalysis.bmrInterpretation ? (
+                        <View style={[styles.metaChipLarge, { backgroundColor: colors.muted }]}>
+                          <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>BMR INTERPRETATION</Text>
+                          <Text style={[colors.typography.caption, { color: colors.foreground }]}>{geminiAnalysis.metabolicHealthAnalysis.bmrInterpretation}</Text>
+                        </View>
+                      ) : null}
+                      {geminiAnalysis.metabolicHealthAnalysis.metabolicAgeInterpretation ? (
+                        <View style={[styles.metaChipLarge, { backgroundColor: colors.muted }]}>
+                          <Text style={[colors.typography.label, { color: colors.mutedForeground }]}>METABOLIC AGE</Text>
+                          <Text style={[colors.typography.caption, { color: colors.foreground }]}>{geminiAnalysis.metabolicHealthAnalysis.metabolicAgeInterpretation}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    {geminiAnalysis.metabolicHealthAnalysis.recommendation ? (
+                      <View style={[styles.recoBox, { backgroundColor: colors.orange + "10", borderLeftColor: colors.orange }]}>
+                        <Ionicons name="bulb-outline" size={13} color={colors.orange} />
+                        <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1 }]}>
+                          {geminiAnalysis.metabolicHealthAnalysis.recommendation}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </GlassCard>
+                )}
+
+                {/* Recomposition Goals timeline */}
+                {geminiAnalysis.recompositionGoals && (
+                  <GlassCard style={styles.analysisCard}>
+                    <View style={styles.analysisHeader}>
+                      <View style={[styles.analysisIconWrap, { backgroundColor: colors.green + "18" }]}>
+                        <Ionicons name="flag" size={18} color={colors.green} />
+                      </View>
+                      <Text style={[colors.typography.h3, { color: colors.foreground }]}>Recomposition Timeline</Text>
+                    </View>
+                    {[
+                      { phase: "Short Term", icon: "flash" as const, color: colors.orange, value: geminiAnalysis.recompositionGoals.shortTerm },
+                      { phase: "Mid Term", icon: "trending-up" as const, color: colors.primary, value: geminiAnalysis.recompositionGoals.mediumTerm },
+                      { phase: "Long Term", icon: "trophy" as const, color: colors.green, value: geminiAnalysis.recompositionGoals.longTerm },
+                    ].filter(p => p.value).map((p) => (
+                      <View key={p.phase} style={[styles.recoBox, { backgroundColor: p.color + "10", borderLeftColor: p.color }]}>
+                        <Ionicons name={p.icon} size={13} color={p.color} />
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <Text style={[colors.typography.label, { color: p.color }]}>{p.phase.toUpperCase()}</Text>
+                          <Text style={[colors.typography.caption, { color: colors.foreground, lineHeight: 20 }]}>{p.value}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </GlassCard>
+                )}
+
+                {/* Health Risks */}
+                {geminiAnalysis.healthRisks && geminiAnalysis.healthRisks.length > 0 && (
+                  <GlassCard style={styles.analysisCard}>
+                    <View style={styles.analysisHeader}>
+                      <View style={[styles.analysisIconWrap, { backgroundColor: colors.red + "18" }]}>
+                        <Ionicons name="alert-circle" size={18} color={colors.red} />
+                      </View>
+                      <Text style={[colors.typography.h3, { color: colors.foreground }]}>Health Risks</Text>
+                    </View>
+                    {geminiAnalysis.healthRisks.map((risk, i) => (
+                      <View key={i} style={styles.swItem}>
+                        <Ionicons name="alert-circle" size={14} color={colors.red} />
+                        <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1 }]}>
+                          {typeof risk === "string" ? risk : JSON.stringify(risk)}
+                        </Text>
+                      </View>
+                    ))}
+                  </GlassCard>
+                )}
+
+                {/* Visceral Fat — WHR implications */}
+                {geminiAnalysis.visceralFatAnalysis && (
+                  <GlassCard style={styles.analysisCard}>
+                    <View style={styles.analysisHeader}>
+                      <View style={[styles.analysisIconWrap, { backgroundColor: colors.red + "18" }]}>
+                        <Ionicons name="pulse" size={18} color={colors.red} />
+                      </View>
+                      <Text style={[colors.typography.h3, { color: colors.foreground, flex: 1 }]}>Visceral Fat</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: (geminiAnalysis.visceralFatAnalysis.risk === "High" || geminiAnalysis.visceralFatAnalysis.risk === "Very High") ? colors.red + "18" : colors.orange + "18" }]}>
+                        <Text style={[colors.typography.label, { color: (geminiAnalysis.visceralFatAnalysis.risk === "High" || geminiAnalysis.visceralFatAnalysis.risk === "Very High") ? colors.red : colors.orange, fontSize: 10 }]}>
+                          {geminiAnalysis.visceralFatAnalysis.risk}
+                        </Text>
+                      </View>
+                    </View>
+                    {geminiAnalysis.visceralFatAnalysis.whrImplication ? (
+                      <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
+                        {geminiAnalysis.visceralFatAnalysis.whrImplication}
+                      </Text>
+                    ) : null}
+                    <View style={[styles.recoBox, { backgroundColor: colors.red + "10", borderLeftColor: colors.red }]}>
+                      <Ionicons name="bulb-outline" size={13} color={colors.red} />
+                      <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1 }]}>
+                        {geminiAnalysis.visceralFatAnalysis.recommendation}
+                      </Text>
+                    </View>
+                  </GlassCard>
+                )}
               </>
             )}
 

@@ -34,64 +34,10 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-type Phase = "upload" | "preview" | "analyzing" | "results" | "plan";
-type PlanType = "trainer" | "ai" | null;
-
-interface GeminiAnalysis {
-  overallSummary: string;
-  fitnessLevel: string;
-  bodyFatAnalysis: { status: string; description: string; recommendation: string };
-  muscleMassAnalysis: { status: string; description: string; recommendation: string };
-  metabolismInsights: { bmr: string; metabolicAge: string; description: string };
-  visceralFatAnalysis: { level: string; risk: string; recommendation: string };
-  strengths: string[];
-  weaknesses: string[];
-  healthRisks: string[];
-  recommendations: string[];
-  workoutPlan: {
-    goal: string;
-    planType: string;
-    weeklySchedule: Array<{ day: string; focus: string; duration?: string; exercises?: string[] } | string>;
-    cardioRecommendation: string;
-  };
-  dietPlan: {
-    calorieTarget: number;
-    deficit: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-    waterLiters: number;
-    meals: Array<string | { name?: string; calories?: number; [key: string]: any }>;
-    supplements: string[];
-  };
-  goalSuggestions: string[];
-  __aiSource?: "groq" | "fallback";
-  __aiModel?: string;
-  __aiRawResponse?: string;
-  __aiUsage?: unknown;
-}
-
-interface ExtractedMetrics {
-  weight?: string;
-  bmi?: string;
-  bodyFat?: string;
-  skeletalMuscleMass?: string;
-  leanBodyMass?: string;
-  protein?: string;
-  bodyWater?: string;
-  bmr?: string;
-  visceralFat?: string;
-  metabolicAge?: string;
-  waistHipRatio?: string;
-}
-
-interface SelectedFile {
-  uri: string;
-  name: string;
-  mimeType: string;
-  size?: number;
-}
+import MetricBig from "./components/MetricBig";
+import AnalysisSection from "./components/AnalysisSection";
+import { parseGeminiAnalysis, getRating } from "./helpers";
+import type { GeminiAnalysis, ExtractedMetrics, Phase, PlanType, SelectedFile } from "./types";
 
 const DEMO_METRICS: ExtractedMetrics = {
   weight: "78.2",
@@ -288,21 +234,25 @@ export default function InBodyScreen() {
       console.log("✅ Upload successful. Extracted metrics:", response.extractedMetrics);
       setMetrics(response.extractedMetrics as ExtractedMetrics);
 
-      // Check if Gemini analysis was included in the response
-      if (response.geminiAnalysis) {
+      const uploadedAnalysis = parseGeminiAnalysis(response.geminiAnalysis);
+      if (uploadedAnalysis) {
         console.log("🤖 Gemini analysis received in upload response");
-        setGeminiAnalysis(response.geminiAnalysis as GeminiAnalysis);
+        setGeminiAnalysis(uploadedAnalysis);
       } else {
         console.log("⏳ No Gemini analysis in upload response. Fetching separately...");
-        // Try to get analysis from the separate endpoint
         try {
           const analysisResult = await analyzeInbodyReport(response.reportId, token);
-          console.log("🤖 Gemini analysis fetched from analyze endpoint");
-          setGeminiAnalysis(analysisResult.analysis as GeminiAnalysis);
+          const analysisData = parseGeminiAnalysis(analysisResult.analysis);
+
+          if (analysisData) {
+            console.log("🤖 Gemini analysis fetched from analyze endpoint");
+            setGeminiAnalysis(analysisData);
+          } else {
+            console.warn("⚠️ Analyze endpoint returned no structured AI analysis", analysisResult);
+          }
         } catch (analyzeErr: any) {
-          console.error("❌ Gemini analysis failed:", analyzeErr.message);
-          setError(`AI Analysis unavailable: ${analyzeErr.message}. Showing extracted metrics only.`);
-          // Don't fall back to demo, show real metrics without analysis
+          console.error("❌ Gemini analysis failed:", analyzeErr?.message ?? analyzeErr);
+          setError(`AI Analysis unavailable: ${analyzeErr?.message ?? "Unknown error"}. Showing extracted metrics only.`);
         }
       }
 
@@ -324,27 +274,6 @@ export default function InBodyScreen() {
     setPhase("plan");
   };
 
-  const getRating = (metric: string, value: number) => {
-    if (metric === "bodyFat") {
-      if (value < 15) return { label: "Low", color: colors.yellow };
-      if (value < 22) return { label: "Optimal", color: colors.green };
-      if (value < 28) return { label: "High", color: colors.orange };
-      return { label: "Very High", color: colors.red };
-    }
-    if (metric === "bmi") {
-      if (value < 18.5) return { label: "Under", color: colors.yellow };
-      if (value < 25) return { label: "Normal", color: colors.green };
-      if (value < 30) return { label: "Over", color: colors.orange };
-      return { label: "Obese", color: colors.red };
-    }
-    if (metric === "visceralFat") {
-      if (value <= 9) return { label: "Normal", color: colors.green };
-      if (value <= 14) return { label: "High", color: colors.orange };
-      return { label: "Very High", color: colors.red };
-    }
-    return { label: "Normal", color: colors.cyan };
-  };
-
   const bodyScore = metrics
     ? Math.min(
         Math.round(
@@ -356,6 +285,25 @@ export default function InBodyScreen() {
         98
       )
     : 0;
+
+  const displayBodyFat =
+    metrics?.bodyFat ?? geminiAnalysis?.bodyFatAnalysis?.status ?? "--";
+  const displayBodyFatUnit = metrics?.bodyFat ? "%" : "";
+  const displayMuscleMass =
+    metrics?.skeletalMuscleMass ?? geminiAnalysis?.muscleMassAnalysis?.status ?? "--";
+  const displayMuscleMassUnit = metrics?.skeletalMuscleMass ? "kg" : "";
+  const displayBmr =
+    metrics?.bmr ??
+    (geminiAnalysis?.metabolismInsights?.bmr !== undefined
+      ? String(geminiAnalysis.metabolismInsights.bmr)
+      : "--");
+  const displayVisceralFat =
+    metrics?.visceralFat ?? geminiAnalysis?.visceralFatAnalysis?.level ?? "--";
+  const displayMetabolicAge =
+    metrics?.metabolicAge ??
+    (geminiAnalysis?.metabolismInsights?.metabolicAge !== undefined
+      ? String(geminiAnalysis.metabolismInsights.metabolicAge)
+      : "--");
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -614,39 +562,38 @@ export default function InBodyScreen() {
               <MetricBig label="Weight" value={metrics.weight ?? "--"} unit="kg" color={colors.primary} />
               <MetricBig
                 label="Body Fat"
-                value={metrics.bodyFat ?? "--"}
-                unit="%"
+                value={displayBodyFat}
+                unit={displayBodyFatUnit}
                 color={colors.purple}
-                rating={metrics.bodyFat ? getRating("bodyFat", parseFloat(metrics.bodyFat)) : undefined}
+                rating={metrics.bodyFat ? getRating("bodyFat", parseFloat(metrics.bodyFat), colors) : undefined}
               />
               <MetricBig
                 label="BMI"
                 value={metrics.bmi ?? "--"}
                 unit=""
                 color={colors.cyan}
-                rating={metrics.bmi ? getRating("bmi", parseFloat(metrics.bmi)) : undefined}
+                rating={metrics.bmi ? getRating("bmi", parseFloat(metrics.bmi), colors) : undefined}
               />
             </View>
 
             {/* Secondary metrics */}
             <View style={styles.secMetricsRow}>
               {[
-                { label: "Muscle Mass", value: metrics.skeletalMuscleMass, unit: "kg", color: colors.green },
-                { label: "BMR", value: metrics.bmr, unit: "kcal", color: colors.orange },
-                { label: "Visceral Fat", value: metrics.visceralFat, unit: "", color: colors.purple },
-                { label: "Metabolic Age", value: metrics.metabolicAge, unit: "yr", color: colors.cyan },
+                { label: "Muscle Mass", value: displayMuscleMass, unit: displayMuscleMassUnit, color: colors.green },
+                { label: "BMR", value: displayBmr, unit: "kcal", color: colors.orange },
+                { label: "Visceral Fat", value: displayVisceralFat, unit: "", color: colors.purple },
+                { label: "Metabolic Age", value: displayMetabolicAge, unit: "yr", color: colors.cyan },
               ].map((m) => (
                 <GlassCard key={m.label} style={styles.secMetricCard}>
-                  <Text style={[colors.typography.h3, { color: m.color, fontSize: 18 }]}>
+                  <Text style={[colors.typography.h3, { color: m.color, fontSize: 18 }]}> 
                     {m.value ?? "--"}{m.unit}
                   </Text>
-                  <Text style={[colors.typography.tiny, { color: colors.mutedForeground, textAlign: "center" }]}>
+                  <Text style={[colors.typography.tiny, { color: colors.mutedForeground, textAlign: "center" }]}> 
                     {m.label}
                   </Text>
                 </GlassCard>
               ))}
             </View>
-
             {/* AI Summary */}
             {geminiAnalysis && (
               <>
@@ -1015,53 +962,6 @@ export default function InBodyScreen() {
         </View>
       </Modal>
     </View>
-  );
-}
-
-function MetricBig({ label, value, unit, color, rating }: {
-  label: string; value: string; unit: string; color: string; rating?: { label: string; color: string };
-}) {
-  const colors = useColors();
-  return (
-    <GlassCard style={styles.metricBig}>
-      <Text style={[colors.typography.h2, { color, fontSize: 24 }]}>{value}<Text style={{ fontSize: 14 }}>{unit}</Text></Text>
-      <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>{label}</Text>
-      {rating && (
-        <View style={[styles.ratingBadge, { backgroundColor: rating.color + "18" }]}>
-          <Text style={[colors.typography.tiny, { color: rating.color }]}>{rating.label}</Text>
-        </View>
-      )}
-    </GlassCard>
-  );
-}
-
-function AnalysisSection({ icon, iconColor, title, status, statusColor, description, recommendation }: {
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  iconColor: string;
-  title: string;
-  status: string;
-  statusColor: string;
-  description: string;
-  recommendation: string;
-}) {
-  const colors = useColors();
-  return (
-    <GlassCard style={styles.analysisCard}>
-      <View style={styles.analysisHeader}>
-        <View style={[styles.analysisIconWrap, { backgroundColor: iconColor + "18" }]}>
-          <Ionicons name={icon} size={18} color={iconColor} />
-        </View>
-        <Text style={[colors.typography.h3, { color: colors.foreground, flex: 1 }]}>{title}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: statusColor + "18" }]}>
-          <Text style={[colors.typography.label, { color: statusColor, fontSize: 10 }]}>{status}</Text>
-        </View>
-      </View>
-      <Text style={[colors.typography.body, { color: colors.mutedForeground }]}>{description}</Text>
-      <View style={[styles.recoBox, { backgroundColor: colors.primary + "10", borderLeftColor: colors.primary }]}>
-        <Ionicons name="bulb-outline" size={13} color={colors.primary} />
-        <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1 }]}>{recommendation}</Text>
-      </View>
-    </GlassCard>
   );
 }
 

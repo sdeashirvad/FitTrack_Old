@@ -37,6 +37,11 @@ export interface ExtractedMetrics {
   visceralFat?: string;
   metabolicAge?: string;
   waistHipRatio?: string;
+  // Extended — populated by vision extraction
+  inbodyScore?: string;
+  height?: string;
+  age?: string;
+  gender?: string;
 }
 
 export interface SelectedFile {

@@ -151,11 +151,18 @@ export async function uploadInbodyReport(req: AuthenticatedRequest, res: Respons
     logger.warn({ reportId, metricCount: Object.keys(extractedMetrics).length }, "Low-quality extraction");
   }
 
-  // ── Run Gemini AI Analysis ───────────────────────────────────────────────────
+  // ── Run Groq AI Analysis ─────────────────────────────────────────────────────
+  // Pass user profile extracted from the report so AI has accurate context
+  const userProfile = {
+    age: extractedMetrics.age ? parseInt(extractedMetrics.age, 10) : undefined,
+    gender: extractedMetrics.gender,
+    height: extractedMetrics.height,
+  };
+
   let geminiAnalysis: GeminiAnalysis | null = null;
   try {
-    logger.info({ reportId, metricsCount: Object.keys(extractedMetrics).length }, "Starting Groq AI analysis");
-    geminiAnalysis = await analyzeWithGemini(extractedMetrics, undefined, rawText);
+    logger.info({ reportId, metricsCount: Object.keys(extractedMetrics).length, userProfile }, "Starting Groq AI analysis");
+    geminiAnalysis = await analyzeWithGemini(extractedMetrics, userProfile, rawText);
     logger.info({ reportId, hasAnalysis: !!geminiAnalysis }, "Groq AI analysis complete");
   } catch (err: any) {
     logger.warn({ err: err.message, reportId }, "Gemini analysis failed — response will include metrics only");

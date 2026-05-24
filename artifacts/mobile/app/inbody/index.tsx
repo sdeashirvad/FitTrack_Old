@@ -256,16 +256,19 @@ export default function InBodyScreen() {
     setPhase("plan");
   };
 
+  // Use the actual InBody score from the report if available; otherwise estimate
   const bodyScore = metrics
-    ? Math.min(
-        Math.round(
-          (1 - Math.abs(parseFloat(metrics.bmi ?? "24") - 22) / 15) * 35 +
-          (parseFloat(metrics.bodyFat ?? "20") < 22 ? 30 : 15) +
-          (parseFloat(metrics.visceralFat ?? "8") <= 9 ? 20 : 8) +
-          (parseFloat(metrics.skeletalMuscleMass ?? "30") > 30 ? 15 : 8)
-        ),
-        98
-      )
+    ? metrics.inbodyScore
+      ? Math.min(parseInt(metrics.inbodyScore, 10), 100)
+      : Math.min(
+          Math.round(
+            (1 - Math.abs(parseFloat(metrics.bmi ?? "24") - 22) / 15) * 35 +
+            (parseFloat(metrics.bodyFat ?? "20") < 22 ? 30 : 15) +
+            (parseFloat(metrics.visceralFat ?? "8") <= 9 ? 20 : 8) +
+            (parseFloat(metrics.skeletalMuscleMass ?? "30") > 30 ? 15 : 8)
+          ),
+          98
+        )
     : 0;
 
   // Body fat: prefer OCR extracted value
@@ -533,6 +536,15 @@ export default function InBodyScreen() {
                   <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
                     {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}
                   </Text>
+                  {(metrics?.height || metrics?.age || metrics?.gender) && (
+                    <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
+                      {[
+                        metrics.gender,
+                        metrics.age ? `Age ${metrics.age}` : null,
+                        metrics.height ? `${metrics.height} cm` : null,
+                      ].filter(Boolean).join(" · ")}
+                    </Text>
+                  )}
                   <View style={[styles.levelBadge, { backgroundColor: colors.primary + "20" }]}>
                     <Text style={[colors.typography.label, { color: colors.primary }]}>
                       {geminiAnalysis?.fitnessLevel ?? "Intermediate"}

@@ -76,6 +76,7 @@ type CompactInBodyMetrics = {
   bmi?: string;
   bodyFat?: string;
   skeletalMuscle?: string;
+  leanBodyMass?: string;
   age?: string;
   gender?: string;
   height?: string;
@@ -84,6 +85,8 @@ type CompactInBodyMetrics = {
   metabolicAge?: string;
   protein?: string;
   bodyWater?: string;
+  waistHipRatio?: string;
+  inbodyScore?: string;
 };
 
 const SYSTEM_PROMPT = `You are an expert InBody fitness analysis AI.
@@ -220,14 +223,20 @@ function toCompactMetrics(
 ): CompactInBodyMetrics {
   return {
     weight: metrics.weight,
+    height: metrics.height,
+    age: metrics.age,
+    gender: metrics.gender,
     bmi: metrics.bmi,
     bodyFat: metrics.bodyFat,
     skeletalMuscle: metrics.skeletalMuscleMass,
+    leanBodyMass: metrics.leanBodyMass,
     bmr: metrics.bmr,
     visceralFat: metrics.visceralFat,
     metabolicAge: metrics.metabolicAge,
     protein: metrics.protein,
     bodyWater: metrics.bodyWater,
+    waistHipRatio: metrics.waistHipRatio,
+    inbodyScore: metrics.inbodyScore,
   };
 }
 

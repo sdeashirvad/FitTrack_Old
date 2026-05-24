@@ -10,17 +10,23 @@
  */
 
 export interface ExtractedInBodyMetrics {
+  // Core composition
   weight?: string;
   bmi?: string;
-  bodyFat?: string;
-  skeletalMuscleMass?: string;
-  leanBodyMass?: string;
+  bodyFat?: string;           // PBF — percent body fat
+  skeletalMuscleMass?: string; // SMM in kg
+  leanBodyMass?: string;      // Fat-free mass
   protein?: string;
   bodyWater?: string;
   bmr?: string;
   visceralFat?: string;
   metabolicAge?: string;
   waistHipRatio?: string;
+  // Extended fields (extracted by vision model)
+  inbodyScore?: string;
+  height?: string;
+  age?: string;
+  gender?: string;
 }
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -53,7 +59,6 @@ export function extractMetrics(rawText: string): ExtractedInBodyMetrics {
   const metrics: ExtractedInBodyMetrics = {};
 
   // Weight (kg)
-  // Handle: "weight 45.4", "weight: 72.5 kg", "body weight 80.0", bare number near "kg"
   metrics.weight = firstMatch(t, [
     /(?:body\s*)?weight[\s:]+(\d[\d\s]*\.?\s*\d*)\s*kg/i,
     /\bwt[\s.:]+(\d[\d\s]*\.?\s*\d*)\s*kg/i,
@@ -68,27 +73,26 @@ export function extractMetrics(rawText: string): ExtractedInBodyMetrics {
     /body\s*mass\s*index[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
   ]);
 
-  // Body Fat %
-  // InBody label is "PBF" (percent body fat) or "Body Fat Mass" / "Body Fat %"
+  // Body Fat % — PBF (percent body fat), NOT body fat mass in kg
   metrics.bodyFat = firstMatch(t, [
     /\bpbf[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
-    /body\s*fat\s*(?:percentage|percent|%|mass)?[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
-    /fat\s*(?:percentage|percent|%|mass)?[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
-    /fat\s*%[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
+    /percent\s*body\s*fat[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
+    /body\s*fat\s*%[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
+    /body\s*fat\s*percentage[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
   ]);
 
-  // Skeletal Muscle Mass
+  // Skeletal Muscle Mass (SMM)
   metrics.skeletalMuscleMass = firstMatch(t, [
-    /skeletal\s*muscle\s*mass[\s:]+(\d[\d\s]*\.?\s*\d*)\s*kg/i,
+    /skeletal\s*muscle\s*mass[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
     /\bsmm[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
     /muscle\s*mass[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
     /skeletal\s*muscle[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
   ]);
 
-  // Lean Body Mass
+  // Lean Body Mass / Fat-Free Mass
   metrics.leanBodyMass = firstMatch(t, [
-    /lean\s*body\s*mass[\s:]+(\d[\d\s]*\.?\s*\d*)\s*kg/i,
-    /fat[\s-]free\s*mass[\s:]+(\d[\d\s]*\.?\s*\d*)\s*kg/i,
+    /lean\s*body\s*mass[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
+    /fat[\s-]free\s*mass[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
     /\bffm[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
     /lean\s*mass[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
   ]);
@@ -99,22 +103,21 @@ export function extractMetrics(rawText: string): ExtractedInBodyMetrics {
     /protein[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
   ]);
 
-  // Body Water / Total Body Water
+  // Body Water
   metrics.bodyWater = firstMatch(t, [
-    /(?:total\s*)?body\s*water[\s:]+(\d[\d\s]*\.?\s*\d*)\s*(?:l|kg|liter)/i,
+    /(?:total\s*)?body\s*water[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
     /\btbw[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
-    /water[\s:]+(\d[\d\s]*\.?\s*\d*)\s*(?:l|kg)/i,
+    /water[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
   ]);
 
   // Basal Metabolic Rate (BMR)
-  // Handle: "BMR 1720", "Basal Metabolic Rate: 1720 kcal", "BMR: 1 7 2 0"
   metrics.bmr = firstMatch(t, [
-    /\bbmr[\s:]+(\d[\d\s]{2,4})\s*(?:kcal|kj)?/i,
-    /basal\s*metabolic\s*rate[\s:]+(\d[\d\s]{2,4})\s*(?:kcal|kj)?/i,
-    /basal\s*metabolism[\s:]+(\d[\d\s]{2,4})/i,
+    /\bbmr[\s:]+(\d[\d\s]{2,5})\s*(?:kcal|kj)?/i,
+    /basal\s*metabolic\s*rate[\s:]+(\d[\d\s]{2,5})/i,
+    /basal\s*metabolism[\s:]+(\d[\d\s]{2,5})/i,
   ]);
 
-  // Visceral Fat
+  // Visceral Fat Level
   metrics.visceralFat = firstMatch(t, [
     /visceral\s*fat[\s:]+(?:level\s*)?(\d[\d\s]*\.?\s*\d*)/i,
     /visceral\s*fat\s*(?:level|rating|area)[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
@@ -126,11 +129,17 @@ export function extractMetrics(rawText: string): ExtractedInBodyMetrics {
     /metabolism\s*age[\s:]+(\d{1,3})/i,
   ]);
 
-  // Waist-Hip Ratio (WHR)
+  // Waist-Hip Ratio
   metrics.waistHipRatio = firstMatch(t, [
     /waist[\s-]hip\s*ratio[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
     /\bwhr[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
     /waist\s*to\s*hip[\s:]+(\d[\d\s]*\.?\s*\d*)/i,
+  ]);
+
+  // InBody Score
+  metrics.inbodyScore = firstMatch(t, [
+    /inbody\s*score[\s:]+(\d+)\s*\/?\s*100/i,
+    /score[\s:]+(\d+)\s*\/\s*100/i,
   ]);
 
   // Remove undefined keys
@@ -140,10 +149,7 @@ export function extractMetrics(rawText: string): ExtractedInBodyMetrics {
 }
 
 // ─── Quality check ────────────────────────────────────────────────────────────
-/**
- * Returns true when enough fields were extracted to be considered a valid scan.
- * Threshold: at least 2 recognised metrics (lowered because InBody OCR can be noisy).
- */
 export function isValidExtraction(metrics: ExtractedInBodyMetrics): boolean {
-  return Object.values(metrics).filter(Boolean).length >= 2;
+  const coreFields = ["weight", "bmi", "bodyFat", "skeletalMuscleMass", "bmr", "visceralFat"];
+  return coreFields.filter((f) => !!(metrics as Record<string, string | undefined>)[f]).length >= 2;
 }

@@ -18,16 +18,6 @@ export interface GeminiAnalysis {
     weeklySchedule: Array<{ day: string; focus: string; duration?: string; exercises?: string[] } | string>;
     cardioRecommendation: string;
   };
-  dietPlan: {
-    calorieTarget: number;
-    deficit: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-    waterLiters: number;
-    meals: Array<string | { name?: string; calories?: number; [key: string]: any }>;
-    supplements: string[];
-  };
   goalSuggestions: string[];
   __aiSource?: "groq" | "fallback";
   __aiModel?: string;

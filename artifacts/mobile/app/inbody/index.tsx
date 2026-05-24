@@ -59,22 +59,22 @@ const DEMO_ANALYSIS: GeminiAnalysis = {
   bodyFatAnalysis: {
     status: "Slightly High",
     description: "At 18.4% body fat, you're in the acceptable range for your age. Targeting 15–17% would significantly improve body composition and athletic performance.",
-    recommendation: "Maintain a 300–400 kcal deficit, prioritise protein intake, and add 2–3 HIIT sessions per week.",
+    recommendation: "Prioritise protein intake and add 2–3 HIIT sessions per week.",
   },
   muscleMassAnalysis: {
     status: "Above Average",
     description: "Skeletal muscle mass of 32.8 kg is above the average for your age and height. This indicates consistent resistance training.",
-    recommendation: "Continue progressive overload with compound movements. Prioritise recovery to maintain muscle during fat loss.",
+    recommendation: "Continue progressive overload with compound movements. Prioritise recovery to maintain muscle.",
   },
   metabolismInsights: {
-    bmr: "1,780 kcal",
+    bmr: "1780",
     metabolicAge: "29",
-    description: "Your basal metabolic rate is healthy. Metabolic age of 29 suggests good metabolic health for your training age.",
+    description: "Basal metabolic rate is healthy. Metabolic age of 29 suggests good metabolic health.",
   },
   visceralFatAnalysis: {
     level: "7",
     risk: "Low",
-    recommendation: "Visceral fat level of 7 is within the healthy range (1–9). Maintain with regular cardio and controlled sugar intake.",
+    recommendation: "Visceral fat is within the healthy range. Maintain with regular cardio and controlled sugar intake.",
   },
   strengths: [
     "Above-average skeletal muscle mass",
@@ -85,14 +85,13 @@ const DEMO_ANALYSIS: GeminiAnalysis = {
   weaknesses: [
     "Body fat slightly above optimal range",
     "Body water percentage can improve with better hydration",
-    "Protein mass could improve with diet optimisation",
+    "Protein mass could improve with nutrition optimisation",
   ],
   healthRisks: [
     "Mild cardiovascular risk if body fat is not reduced",
     "Risk of muscle loss during aggressive cutting without adequate protein",
   ],
   recommendations: [
-    "Maintain 300–400 kcal daily deficit through diet",
     "Prioritise 1.8–2.2g protein per kg body weight",
     "Add 2x HIIT sessions per week",
     "Drink 3+ litres of water daily",
@@ -107,27 +106,10 @@ const DEMO_ANALYSIS: GeminiAnalysis = {
       { day: "Wednesday", focus: "HIIT Cardio", duration: "25 min", exercises: ["Jump Rope", "Burpees", "Sprint Intervals"] },
       { day: "Thursday", focus: "Legs", duration: "60 min", exercises: ["Squats", "Romanian DL", "Leg Press", "Calf Raises"] },
       { day: "Friday", focus: "Push + Core", duration: "55 min", exercises: ["DB Shoulder Press", "Cable Flyes", "Planks", "Ab Wheel"] },
-      { day: "Saturday", focus: "Active Recovery / Walk", duration: "40 min", exercises: ["30-min brisk walk", "Stretching"] },
-      { day: "Sunday", focus: "Rest", duration: "--" },
+      { day: "Saturday", focus: "Active Recovery", duration: "40 min", exercises: ["Brisk walk", "Stretching"] },
+      { day: "Sunday", focus: "Rest", duration: "—" },
     ],
     cardioRecommendation: "2x HIIT (20–25 min) + 1x steady state (30 min walk) per week",
-  },
-  dietPlan: {
-    calorieTarget: 2100,
-    deficit: 350,
-    protein: 160,
-    carbs: 220,
-    fat: 60,
-    waterLiters: 3.5,
-    meals: [
-      "Breakfast: Oats with whey + banana (500 kcal)",
-      "Mid-morning: Greek yogurt + nuts (250 kcal)",
-      "Lunch: Dal rice + sabzi + curd (600 kcal)",
-      "Pre-workout: Banana + black coffee (100 kcal)",
-      "Dinner: Chicken/paneer + roti + salad (550 kcal)",
-      "Post-workout: Whey protein shake (150 kcal)",
-    ],
-    supplements: ["Whey protein (post-workout)", "Creatine 5g/day", "Vitamin D3 + K2", "Omega-3 (2 caps/day)"],
   },
   goalSuggestions: [
     "Reach 15% body fat in 8–10 weeks",
@@ -286,24 +268,36 @@ export default function InBodyScreen() {
       )
     : 0;
 
-  const displayBodyFat =
-    metrics?.bodyFat ?? geminiAnalysis?.bodyFatAnalysis?.status ?? "--";
-  const displayBodyFatUnit = metrics?.bodyFat ? "%" : "";
-  const displayMuscleMass =
-    metrics?.skeletalMuscleMass ?? geminiAnalysis?.muscleMassAnalysis?.status ?? "--";
-  const displayMuscleMassUnit = metrics?.skeletalMuscleMass ? "kg" : "";
+  // Body fat: prefer OCR extracted value
+  const rawBodyFat = metrics?.bodyFat;
+  const displayBodyFat = rawBodyFat ?? "--";
+  const displayBodyFatUnit = rawBodyFat ? "%" : "";
+
+  // Muscle mass: prefer OCR extracted value
+  const rawMuscleMass = metrics?.skeletalMuscleMass;
+  const displayMuscleMass = rawMuscleMass ?? "--";
+  const displayMuscleMassUnit = rawMuscleMass ? "kg" : "";
+
+  // BMR: prefer OCR, then AI numeric value (already sanitized to digits only)
+  const aiBmr = geminiAnalysis?.metabolismInsights?.bmr;
   const displayBmr =
-    metrics?.bmr ??
-    (geminiAnalysis?.metabolismInsights?.bmr !== undefined
-      ? String(geminiAnalysis.metabolismInsights.bmr)
-      : "--");
+    metrics?.bmr ||
+    (aiBmr && /^\d+$/.test(aiBmr) ? aiBmr : null) ||
+    "--";
+
+  // Visceral fat: prefer OCR, then AI numeric level
+  const aiVisceralLevel = geminiAnalysis?.visceralFatAnalysis?.level;
   const displayVisceralFat =
-    metrics?.visceralFat ?? geminiAnalysis?.visceralFatAnalysis?.level ?? "--";
+    metrics?.visceralFat ||
+    (aiVisceralLevel && /^\d+(\.\d+)?$/.test(aiVisceralLevel) ? aiVisceralLevel : null) ||
+    "--";
+
+  // Metabolic age: prefer OCR, then AI numeric value
+  const aiMetabolicAge = geminiAnalysis?.metabolismInsights?.metabolicAge;
   const displayMetabolicAge =
-    metrics?.metabolicAge ??
-    (geminiAnalysis?.metabolismInsights?.metabolicAge !== undefined
-      ? String(geminiAnalysis.metabolismInsights.metabolicAge)
-      : "--");
+    metrics?.metabolicAge ||
+    (aiMetabolicAge && /^\d+$/.test(aiMetabolicAge) ? aiMetabolicAge : null) ||
+    "--";
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -816,57 +810,20 @@ export default function InBodyScreen() {
                   </GlassCard>
                 )})}
 
-                {/* Diet Plan */}
-                <SectionHeader title="Diet Plan" />
-                <GlassCard style={styles.dietCard}>
-                  <View style={styles.macroTargets}>
-                    {[
-                      { label: "Calories", value: `${geminiAnalysis.dietPlan.calorieTarget}`, unit: "kcal", color: colors.primary },
-                      { label: "Protein", value: `${geminiAnalysis.dietPlan.protein}`, unit: "g", color: colors.green },
-                      { label: "Carbs", value: `${geminiAnalysis.dietPlan.carbs}`, unit: "g", color: colors.purple },
-                      { label: "Fat", value: `${geminiAnalysis.dietPlan.fat}`, unit: "g", color: colors.yellow },
-                    ].map((m) => (
-                      <View key={m.label} style={[styles.macroTarget, { backgroundColor: m.color + "12" }]}>
-                        <Text style={[colors.typography.h3, { color: m.color, fontSize: 18 }]}>{m.value}</Text>
-                        <Text style={[colors.typography.tiny, { color: m.color }]}>{m.unit}</Text>
-                        <Text style={[colors.typography.tiny, { color: colors.mutedForeground }]}>{m.label}</Text>
+                {/* Cardio recommendation */}
+                {geminiAnalysis.workoutPlan.cardioRecommendation ? (
+                  <GlassCard style={{ padding: 14, gap: 8 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <View style={[styles.analysisIconWrap, { backgroundColor: colors.cyan + "18" }]}>
+                        <Ionicons name="pulse" size={16} color={colors.cyan} />
                       </View>
-                    ))}
-                  </View>
-                  <View style={[styles.waterRow, { backgroundColor: colors.cyan + "12" }]}>
-                    <Ionicons name="water" size={16} color={colors.cyan} />
-                    <Text style={[colors.typography.bodyMedium, { color: colors.cyan }]}>
-                      {geminiAnalysis.dietPlan.waterLiters}L water daily
-                    </Text>
-                  </View>
-                  {geminiAnalysis.dietPlan.meals.map((meal, i) => {
-                    const mealText = typeof meal === "string" 
-                      ? meal 
-                      : (meal as any).name 
-                        ? `${(meal as any).name}: ${(meal as any).calories ?? ""} kcal` 
-                        : JSON.stringify(meal);
-                    return (
-                    <View key={i} style={styles.mealPlanRow}>
-                      <View style={[styles.mealDot, { backgroundColor: colors.primary }]} />
-                      <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1 }]}>{mealText}</Text>
+                      <Text style={[colors.typography.h3, { color: colors.foreground }]}>Cardio</Text>
                     </View>
-                  )})}
-                </GlassCard>
-
-                {/* Supplements */}
-                <GlassCard style={styles.suppCard}>
-                  <Text style={[colors.typography.label, { color: colors.purple }]}>SUPPLEMENTS</Text>
-                  <View style={styles.suppGrid}>
-                    {geminiAnalysis.dietPlan.supplements.map((s, i) => (
-                      <View key={i} style={[styles.suppChip, { backgroundColor: colors.purple + "12" }]}>
-                        <Ionicons name="flask" size={12} color={colors.purple} />
-                        <Text style={[colors.typography.caption, { color: colors.foreground, fontSize: 12 }]}>
-                          {typeof s === "string" ? s : JSON.stringify(s)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </GlassCard>
+                    <Text style={[colors.typography.body, { color: colors.mutedForeground }]}>
+                      {geminiAnalysis.workoutPlan.cardioRecommendation}
+                    </Text>
+                  </GlassCard>
+                ) : null}
               </>
             )}
 
@@ -1027,15 +984,6 @@ const styles = StyleSheet.create({
   dayCard: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
   dayBadge: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   durationBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
-  dietCard: { padding: 16, gap: 12 },
-  macroTargets: { flexDirection: "row", gap: 8 },
-  macroTarget: { flex: 1, padding: 10, borderRadius: 12, alignItems: "center", gap: 2 },
-  waterRow: { flexDirection: "row", alignItems: "center", gap: 8, padding: 10, borderRadius: 10 },
-  mealPlanRow: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
-  mealDot: { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
-  suppCard: { padding: 16, gap: 12 },
-  suppGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  suppChip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
   trainerCard: { alignItems: "center", padding: 28, gap: 16, overflow: "hidden" },
   trainerIcon: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center" },
   trainerBtn: { paddingHorizontal: 28, paddingVertical: 14 },

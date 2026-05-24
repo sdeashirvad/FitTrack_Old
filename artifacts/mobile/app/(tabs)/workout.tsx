@@ -4,13 +4,12 @@ import { useColors } from "@/hooks/useColors";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Animated,
-  Modal,
+  Dimensions,
+  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -22,60 +21,84 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AIWorkoutOnboarding from "../workout/ai-onboarding";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+const { width } = Dimensions.get("window");
+const ORANGE = "#FF6B35";
+const ORANGE_SOFT = "#FF6B3512";
+const BG = "#F7F8FA";
+const CARD = "#FFFFFF";
+const TEXT = "#1A1A1E";
+const MUTED = "#9098A3";
+const DARK_CARD_FROM = "#1A1A2E";
+const DARK_CARD_TO = "#0D0D0D";
 
-interface ExerciseData {
-  name: string;
-  muscle: string;
-  sets: string;
-  reps: string;
-  rest: string;
-  difficulty: "Beginner" | "Intermediate" | "Advanced";
-  calories: number;
-  tip: string;
-  gifUrl?: string;
-  target?: string;
-  equipment?: string;
-  instructions?: string[];
+// ─── Category data ────────────────────────────────────────────────────────────
+
+const CATEGORIES = [
+  { key: "hiit",     label: "HIIT",     icon: "flame",          bg: "#22C55E18", color: "#22C55E" },
+  { key: "strength", label: "Strength", icon: "barbell",        bg: "#FF6B3515", color: ORANGE },
+  { key: "focus",    label: "Focus",    icon: "flash",          bg: "#8B5CF618", color: "#8B5CF6" },
+  { key: "agility",  label: "Agility",  icon: "bicycle",        bg: "#3B82F618", color: "#3B82F6" },
+  { key: "mobility", label: "Mobility", icon: "body",           bg: "#F59E0B18", color: "#F59E0B" },
+];
+
+// ─── Static fallback days ─────────────────────────────────────────────────────
+
+const FALLBACK_DAYS = [
+  {
+    dayName: "Monday", focus: "Push", isRest: false, isCardio: false,
+    estimatedCalories: 340, estimatedDuration: "50 min",
+    exercises: [
+      { id: "1", name: "Barbell Bench Press", bodyPart: "Chest", target: "Pectorals", equipment: "Barbell", gifUrl: "", sets: 4, repsRange: "8–10", restSeconds: 90, estimatedCaloriesPerSet: 14, difficulty: "Intermediate", instructions: ["Lie flat on bench, grip bar wider than shoulder-width.", "Lower to mid-chest with control.", "Press up explosively."] },
+      { id: "2", name: "Overhead Press",      bodyPart: "Shoulders", target: "Delts", equipment: "Barbell", gifUrl: "", sets: 3, repsRange: "10–12", restSeconds: 75, estimatedCaloriesPerSet: 10, difficulty: "Intermediate", instructions: ["Grip just outside shoulders.", "Press overhead to lockout.", "Lower with control."] },
+      { id: "3", name: "Incline DB Press",    bodyPart: "Chest", target: "Pectorals", equipment: "Dumbbell", gifUrl: "", sets: 3, repsRange: "10–12", restSeconds: 60, estimatedCaloriesPerSet: 12, difficulty: "Beginner", instructions: ["Set bench to 30–45°.", "Press dumbbells up and together.", "Control descent."] },
+      { id: "4", name: "Tricep Pushdown",     bodyPart: "Upper Arms", target: "Triceps", equipment: "Cable", gifUrl: "", sets: 3, repsRange: "12–15", restSeconds: 45, estimatedCaloriesPerSet: 8, difficulty: "Beginner", instructions: ["Keep elbows pinned to sides.", "Extend arms fully.", "Squeeze triceps."] },
+    ],
+  },
+  {
+    dayName: "Tuesday", focus: "Pull", isRest: false, isCardio: false,
+    estimatedCalories: 380, estimatedDuration: "55 min",
+    exercises: [
+      { id: "5", name: "Pull-ups",       bodyPart: "Back", target: "Lats", equipment: "Body Weight", gifUrl: "", sets: 4, repsRange: "6–10", restSeconds: 90, estimatedCaloriesPerSet: 16, difficulty: "Intermediate", instructions: ["Full dead-hang start.", "Pull until chin clears bar.", "Lower with control."] },
+      { id: "6", name: "Barbell Row",    bodyPart: "Back", target: "Upper Back", equipment: "Barbell", gifUrl: "", sets: 4, repsRange: "8–10", restSeconds: 75, estimatedCaloriesPerSet: 15, difficulty: "Intermediate", instructions: ["Keep back neutral.", "Pull to lower chest.", "Pause at top."] },
+      { id: "7", name: "Face Pulls",     bodyPart: "Shoulders", target: "Rear Delts", equipment: "Cable", gifUrl: "", sets: 3, repsRange: "15–20", restSeconds: 45, estimatedCaloriesPerSet: 8, difficulty: "Beginner", instructions: ["Set cable at face height.", "Pull to forehead.", "Externally rotate at end."] },
+      { id: "8", name: "Hammer Curls",   bodyPart: "Upper Arms", target: "Biceps", equipment: "Dumbbell", gifUrl: "", sets: 3, repsRange: "10–12", restSeconds: 45, estimatedCaloriesPerSet: 9, difficulty: "Beginner", instructions: ["Neutral grip (thumbs up).", "Curl to shoulder height.", "Control the descent."] },
+    ],
+  },
+  {
+    dayName: "Wednesday", focus: "Rest", isRest: true, isCardio: false,
+    estimatedCalories: 0, estimatedDuration: "—", exercises: [],
+  },
+  {
+    dayName: "Thursday", focus: "Legs", isRest: false, isCardio: false,
+    estimatedCalories: 450, estimatedDuration: "60 min",
+    exercises: [
+      { id: "9",  name: "Barbell Squat",       bodyPart: "Upper Legs", target: "Quads", equipment: "Barbell", gifUrl: "", sets: 4, repsRange: "8–10", restSeconds: 120, estimatedCaloriesPerSet: 22, difficulty: "Advanced", instructions: ["Bar on upper traps.", "Break parallel.", "Drive through heels."] },
+      { id: "10", name: "Romanian Deadlift",   bodyPart: "Upper Legs", target: "Hamstrings", equipment: "Barbell", gifUrl: "", sets: 3, repsRange: "10–12", restSeconds: 75, estimatedCaloriesPerSet: 18, difficulty: "Intermediate", instructions: ["Hinge at hips.", "Keep bar close to legs.", "Feel hamstring stretch."] },
+      { id: "11", name: "Leg Press",           bodyPart: "Upper Legs", target: "Quads", equipment: "Machine", gifUrl: "", sets: 3, repsRange: "12–15", restSeconds: 60, estimatedCaloriesPerSet: 15, difficulty: "Beginner", instructions: ["Feet shoulder-width.", "Lower to 90°.", "Press through heels."] },
+      { id: "12", name: "Standing Calf Raise", bodyPart: "Lower Legs", target: "Calves", equipment: "Machine", gifUrl: "", sets: 4, repsRange: "15–20", restSeconds: 30, estimatedCaloriesPerSet: 6, difficulty: "Beginner", instructions: ["Rise as high as possible.", "Pause at top.", "Full range down."] },
+    ],
+  },
+  {
+    dayName: "Friday", focus: "Cardio", isRest: false, isCardio: true,
+    estimatedCalories: 280, estimatedDuration: "30 min",
+    exercises: [
+      { id: "13", name: "Treadmill Intervals", bodyPart: "Cardio", target: "Cardiovascular System", equipment: "Treadmill", gifUrl: "", sets: 1, repsRange: "30 min", restSeconds: 0, estimatedCaloriesPerSet: 280, difficulty: "Beginner", instructions: ["2–5° incline.", "65–75% max heart rate.", "Alternate 1 min fast / 1 min walk."] },
+    ],
+  },
+  { dayName: "Saturday", focus: "Rest", isRest: true, isCardio: false, estimatedCalories: 0, estimatedDuration: "—", exercises: [] },
+  { dayName: "Sunday",   focus: "Rest", isRest: true, isCardio: false, estimatedCalories: 0, estimatedDuration: "—", exercises: [] },
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function planDayToDay(day: any) { return day; }
+
+function getApiBase() {
+  const d = process.env.EXPO_PUBLIC_DOMAIN;
+  if (d) return `https://${d}`;
+  if (Platform.OS === "android") return "http://10.0.2.2:3001";
+  return "http://localhost:3001";
 }
-
-interface ProgramCard {
-  name: string;
-  desc: string;
-  duration: string;
-  totalCal: number;
-  exercises: ExerciseData[];
-  color: string;
-  gradient: [string, string];
-}
-
-// ─── Static fallback data ────────────────────────────────────────────────────
-
-const PUSH_EXERCISES: ExerciseData[] = [
-  { name: "Bench Press", muscle: "Chest", sets: "4", reps: "8–10", rest: "90s", difficulty: "Intermediate", calories: 55, tip: "Keep shoulder blades pinched together throughout." },
-  { name: "Overhead Press", muscle: "Shoulders", sets: "3", reps: "10–12", rest: "75s", difficulty: "Intermediate", calories: 40, tip: "Brace core and don't flare elbows wide." },
-  { name: "Incline DB Press", muscle: "Upper Chest", sets: "3", reps: "10–12", rest: "60s", difficulty: "Beginner", calories: 45, tip: "Use 30–45° incline for best upper chest activation." },
-  { name: "Tricep Pushdown", muscle: "Triceps", sets: "3", reps: "12–15", rest: "45s", difficulty: "Beginner", calories: 30, tip: "Keep elbows tucked at sides throughout." },
-];
-const PULL_EXERCISES: ExerciseData[] = [
-  { name: "Pull-ups", muscle: "Back / Lats", sets: "4", reps: "6–10", rest: "90s", difficulty: "Intermediate", calories: 60, tip: "Full dead-hang at bottom for full range of motion." },
-  { name: "Barbell Row", muscle: "Upper Back", sets: "4", reps: "8–10", rest: "75s", difficulty: "Intermediate", calories: 55, tip: "Keep back neutral, pull to lower chest." },
-  { name: "Face Pulls", muscle: "Rear Delts", sets: "3", reps: "15–20", rest: "45s", difficulty: "Beginner", calories: 25, tip: "External rotate wrists at the end of each rep." },
-  { name: "Hammer Curls", muscle: "Biceps", sets: "3", reps: "10–12", rest: "45s", difficulty: "Beginner", calories: 28, tip: "Neutral grip targets brachialis for arm thickness." },
-];
-const LEG_EXERCISES: ExerciseData[] = [
-  { name: "Barbell Squat", muscle: "Quads / Glutes", sets: "4", reps: "8–10", rest: "120s", difficulty: "Advanced", calories: 80, tip: "Drive knees out and keep chest tall." },
-  { name: "Romanian Deadlift", muscle: "Hamstrings", sets: "3", reps: "10–12", rest: "75s", difficulty: "Intermediate", calories: 60, tip: "Hinge at hips, keep bar close to body." },
-  { name: "Leg Press", muscle: "Quads", sets: "3", reps: "12–15", rest: "60s", difficulty: "Beginner", calories: 50, tip: "Full range but don't lock knees out hard." },
-  { name: "Calf Raises", muscle: "Calves", sets: "4", reps: "15–20", rest: "30s", difficulty: "Beginner", calories: 20, tip: "Pause at top for 1 second for peak contraction." },
-];
-
-const STATIC_PROGRAMS: ProgramCard[] = [
-  { name: "Push Day", desc: "Chest · Shoulders · Triceps", duration: "45–55 min", totalCal: 320, exercises: PUSH_EXERCISES, color: "#FF6B35", gradient: ["#FF6B35", "#E8521A"] },
-  { name: "Pull Day", desc: "Back · Biceps · Rear Delts", duration: "50–60 min", totalCal: 370, exercises: PULL_EXERCISES, color: "#8B5CF6", gradient: ["#8B5CF6", "#6D28D9"] },
-  { name: "Leg Day", desc: "Quads · Hamstrings · Glutes", duration: "55–70 min", totalCal: 420, exercises: LEG_EXERCISES, color: "#EF4444", gradient: ["#EF4444", "#DC2626"] },
-  { name: "HIIT Cardio", desc: "Full body fat burn", duration: "20 min", totalCal: 280, exercises: [], color: "#22C55E", gradient: ["#22C55E", "#16A34A"] },
-];
 
 const DIFF_COLOR: Record<string, string> = {
   Beginner: "#22C55E",
@@ -83,70 +106,28 @@ const DIFF_COLOR: Record<string, string> = {
   Advanced: "#EF4444",
 };
 
-// ─── Helper ──────────────────────────────────────────────────────────────────
-
-function planDayToProgram(day: any, goalColor: string): ProgramCard {
-  const exercises: ExerciseData[] = (day.exercises ?? []).map((ex: any) => ({
-    name: ex.name,
-    muscle: ex.target ?? ex.bodyPart ?? "",
-    sets: String(ex.sets),
-    reps: ex.repsRange ?? "10-12",
-    rest: ex.restSeconds ? `${ex.restSeconds}s` : "60s",
-    difficulty: (ex.difficulty ?? "Beginner") as any,
-    calories: (ex.estimatedCaloriesPerSet ?? 12) * (ex.sets ?? 3),
-    tip: ex.instructions?.[0] ?? "",
-    gifUrl: ex.gifUrl,
-    target: ex.target,
-    equipment: ex.equipment,
-    instructions: ex.instructions,
-  }));
-
-  return {
-    name: day.focus ?? day.dayName,
-    desc: day.isCardio ? "Cardio session" : (day.exercises?.map((e: any) => e.target).filter(Boolean).slice(0, 3).join(" · ") || "Strength training"),
-    duration: day.estimatedDuration ?? "45 min",
-    totalCal: day.estimatedCalories ?? 300,
-    exercises,
-    color: day.isCardio ? "#22C55E" : day.isRest ? "#6B7280" : goalColor,
-    gradient: [day.isCardio ? "#22C55E" : goalColor, day.isCardio ? "#16A34A" : goalColor + "CC"],
-  };
-}
-
-// ─── Main Screen ─────────────────────────────────────────────────────────────
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function WorkoutScreen() {
-  const colors = useColors();
+  const { addWorkout } = useFitness();
+  const { token, user } = useAuth();
   const insets = useSafeAreaInsets();
-  const { recentWorkouts, addWorkout } = useFitness();
-  const { token } = useAuth();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  // Onboarding state
+  // onboarding
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [activeGoal, setActiveGoal] = useState<string | null>(null);
   const [dynamicPlan, setDynamicPlan] = useState<any[] | null>(null);
   const [dynamicStrategy, setDynamicStrategy] = useState<any | null>(null);
 
-  // Dashboard state
-  const [selectedProgram, setSelectedProgram] = useState<ProgramCard | null>(null);
-  const [expandedEx, setExpandedEx] = useState<string | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [workoutName, setWorkoutName] = useState("");
+  // UI state
+  const [activeCategory, setActiveCategory] = useState("strength");
+  const [searchText, setSearchText] = useState("");
+  const [playlistDay, setPlaylistDay] = useState<any | null>(null);
 
-  function getApiBase() {
-    const EXPO_PUBLIC_DOMAIN = process.env.EXPO_PUBLIC_DOMAIN;
-    if (EXPO_PUBLIC_DOMAIN) return `https://${EXPO_PUBLIC_DOMAIN}`;
-    if (Platform.OS === "android") return "http://10.0.2.2:3001";
-    return "http://localhost:3001";
-  }
-
-  // ── Check onboarding status on mount ──────────────────────────────────────
   useEffect(() => {
-    if (!token) {
-      setOnboardingChecked(true);
-      return;
-    }
+    if (!token) { setOnboardingChecked(true); return; }
     checkOnboarding();
   }, [token]);
 
@@ -156,474 +137,572 @@ export default function WorkoutScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-
       if (data.completed && data.workoutPlan) {
-        // Already completed — load saved plan into dashboard
         setActiveGoal(data.fitnessGoal ?? null);
         setDynamicPlan(data.workoutPlan);
-        setShowOnboarding(false);
       } else if (!data.completed) {
         setShowOnboarding(true);
       }
-    } catch {
-      // Network error — skip onboarding, show default dashboard
-    } finally {
-      setOnboardingChecked(true);
-    }
+    } catch {}
+    finally { setOnboardingChecked(true); }
   };
 
-  // ── Build programs for the horizontal scroll ───────────────────────────────
-  const programs: ProgramCard[] = dynamicPlan
-    ? dynamicPlan
-        .filter((d) => !d.isRest)
-        .map((d) => planDayToProgram(d, colors.primary))
-    : STATIC_PROGRAMS;
-
-  useEffect(() => {
-    if (programs.length > 0 && !selectedProgram) {
-      setSelectedProgram(programs[0]);
-    }
-  }, [dynamicPlan]);
-
-  // ── Onboarding completion callback ────────────────────────────────────────
   const handleOnboardingComplete = (plan: any[], goal: string, strategy: any) => {
     setDynamicPlan(plan);
     setActiveGoal(goal);
     setDynamicStrategy(strategy);
     setShowOnboarding(false);
-
-    // Pick first non-rest day as selected
-    const firstActive = plan.find((d) => !d.isRest);
-    if (firstActive) {
-      setSelectedProgram(planDayToProgram(firstActive, colors.primary));
-    }
   };
 
-  // ── Reset onboarding (Change Workout System) ───────────────────────────────
   const handleChangeWorkout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      "Change Workout System",
-      "This will re-run the AI onboarding to build you a new personalised plan. Continue?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Continue",
-          onPress: async () => {
-            try {
-              await fetch(`${getApiBase()}/api/workout/onboarding/reset`, {
-                method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
-              });
-            } catch {}
-            setDynamicPlan(null);
-            setActiveGoal(null);
-            setSelectedProgram(null);
-            setShowOnboarding(true);
-          },
+    Alert.alert("Change Workout Plan", "Re-run AI onboarding to get a new personalised plan?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Continue",
+        onPress: async () => {
+          try { await fetch(`${getApiBase()}/api/workout/onboarding/reset`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }); } catch {}
+          setDynamicPlan(null); setActiveGoal(null); setDynamicStrategy(null);
+          setPlaylistDay(null); setShowOnboarding(true);
         },
-      ],
-    );
+      },
+    ]);
   };
 
-  const logWorkout = () => {
-    if (!workoutName.trim()) {
-      Alert.alert("Name required", "Give your workout a name");
-      return;
-    }
-    addWorkout({ name: workoutName, date: new Date().toISOString().split("T")[0], duration: 45, exercises: [], calories: 320 });
-    setShowModal(false);
-    setWorkoutName("");
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  };
-
-  // ── Loading state while checking onboarding ───────────────────────────────
   if (!onboardingChecked) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={[styles.loader, { backgroundColor: BG }]}>
+        <ActivityIndicator size="large" color={ORANGE} />
       </View>
     );
   }
-
-  // ── Show AI onboarding ────────────────────────────────────────────────────
   if (showOnboarding) {
+    return <AIWorkoutOnboarding onComplete={handleOnboardingComplete} onSkip={() => setShowOnboarding(false)} />;
+  }
+
+  const days = dynamicPlan ?? FALLBACK_DAYS;
+  const activeDays = days.filter((d: any) => !d.isRest);
+
+  // Playlist view (screenshot 1)
+  if (playlistDay) {
     return (
-      <AIWorkoutOnboarding
-        onComplete={handleOnboardingComplete}
-        onSkip={() => setShowOnboarding(false)}
+      <PlaylistView
+        day={playlistDay}
+        topPad={topPad}
+        insets={insets}
+        onBack={() => setPlaylistDay(null)}
+        addWorkout={addWorkout}
       />
     );
   }
 
-  // ── Normal workout dashboard ──────────────────────────────────────────────
+  // Home view (screenshot 2)
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.root, { backgroundColor: BG }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scroll, { paddingTop: topPad + 16, paddingBottom: insets.bottom + 110 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: topPad + 8, paddingBottom: insets.bottom + 110 }]}
       >
-        {/* Header */}
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.headerTitle, { color: colors.foreground }]}>Workouts</Text>
-            <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-            </Text>
-            {activeGoal && (
-              <View style={[styles.goalBadge, { backgroundColor: colors.primary + "15" }]}>
-                <Ionicons name="flag" size={11} color={colors.primary} />
-                <Text style={[styles.goalBadgeText, { color: colors.primary }]}>{activeGoal}</Text>
+        {/* ── Header ── */}
+        <View style={styles.header}>
+          <View style={styles.avatarWrap}>
+            {user?.avatar ? (
+              <Image source={{ uri: user.avatar }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarFallback]}>
+                <Text style={styles.avatarLetter}>{(user?.name ?? "U").charAt(0).toUpperCase()}</Text>
               </View>
             )}
           </View>
-          <View style={styles.headerActions}>
+          <Text style={styles.headerTitle}>Workouts</Text>
+          <View style={styles.headerRight}>
             {token && (
-              <TouchableOpacity
-                onPress={handleChangeWorkout}
-                style={[styles.changeBtn, { backgroundColor: colors.card, ...colors.shadow.soft }]}
-              >
-                <Ionicons name="options-outline" size={16} color={colors.primary} />
-                <Text style={[styles.changeBtnText, { color: colors.primary }]}>Change</Text>
+              <TouchableOpacity onPress={handleChangeWorkout} style={styles.iconBtn}>
+                <Ionicons name="options-outline" size={20} color={TEXT} />
               </TouchableOpacity>
             )}
-            <TouchableOpacity
-              onPress={() => router.push("/workout/weekly-plan" as any)}
-              style={[styles.planBtn, { backgroundColor: colors.card, ...colors.shadow.soft }]}
-            >
-              <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+            <TouchableOpacity style={styles.iconBtn}>
+              <Ionicons name="notifications-outline" size={20} color={TEXT} />
+              <View style={styles.notifDot} />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Featured workout hero */}
-        {dynamicStrategy && (
-          <View style={[styles.strategyBanner, { backgroundColor: colors.card, ...colors.shadow.soft }]}>
-            <LinearGradient
-              colors={[colors.primary + "18", colors.card]}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <View style={styles.strategyBannerContent}>
-              <View>
-                <Text style={[styles.strategyBannerTitle, { color: colors.foreground }]}>{dynamicStrategy.splitName}</Text>
-                <Text style={[styles.strategyBannerSub, { color: colors.mutedForeground }]}>
-                  {dynamicStrategy.daysPerWeek} days/week · {dynamicStrategy.sessionDuration}
-                </Text>
-              </View>
-              <View style={styles.strategyBannerPills}>
-                <StratPill label={dynamicStrategy.intensity} color={colors.primary} />
-                <StratPill label={dynamicStrategy.cardioFrequency} color="#3B82F6" />
-              </View>
-            </View>
-          </View>
-        )}
-
-        {!dynamicStrategy && (
-          <TouchableOpacity
-            activeOpacity={0.92}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowModal(true); }}
-            style={[styles.heroCard, { ...colors.shadow.strong }]}
-          >
-            <LinearGradient
-              colors={["#1A1A2E", "#16213E", "#0F3460"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.heroGrad}
-            >
-              <View style={styles.heroBadgeRow}>
-                <View style={[styles.heroBadge, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.heroBadgeText}>INTENSE</Text>
-                </View>
-                <TouchableOpacity style={styles.heroSettings}>
-                  <Ionicons name="settings-outline" size={16} color="rgba(255,255,255,0.8)" />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.heroBody}>
-                <Text style={styles.heroTitle}>Back Workout</Text>
-                <Text style={styles.heroTrainer}>With Azunyan U. Wu</Text>
-                <View style={styles.heroStatsRow}>
-                  <HeroStat icon="time-outline" value="58min" label="Time" />
-                  <HeroStat icon="flame-outline" value="254kcal" label="Calorie" />
-                  <HeroStat icon="layers-outline" value="3×4" label="Sets" />
-                </View>
-                <View style={styles.heroBtns}>
-                  <TouchableOpacity style={styles.detailsBtn}>
-                    <Text style={styles.detailsText}>Details</Text>
-                    <Ionicons name="document-text-outline" size={14} color="#fff" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setShowModal(true); }}
-                    style={[styles.startBtn, { backgroundColor: colors.primary }]}
-                  >
-                    <Text style={styles.startText}>Start</Text>
-                    <Ionicons name="flame" size={14} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-
-        {/* Programs */}
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-          {dynamicPlan ? "Your Training Days" : "Training Programs"}
-        </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.programList}>
-          {programs.map((p) => (
-            <TouchableOpacity
-              key={p.name}
-              onPress={() => { Haptics.selectionAsync(); setSelectedProgram(selectedProgram?.name === p.name ? null : p); }}
-              style={[styles.programCard, { backgroundColor: colors.card, ...colors.shadow.soft, borderWidth: selectedProgram?.name === p.name ? 2 : 0, borderColor: p.color }]}
-            >
-              <LinearGradient colors={[p.color + "20", p.color + "08"]} style={StyleSheet.absoluteFillObject} />
-              <View style={[styles.programIconWrap, { backgroundColor: p.color + "20" }]}>
-                <Ionicons name="barbell-outline" size={22} color={p.color} />
-              </View>
-              <Text style={[styles.programName, { color: colors.foreground }]}>{p.name}</Text>
-              <Text style={[styles.programDesc, { color: colors.mutedForeground }]}>{p.desc}</Text>
-              <View style={styles.programMeta}>
-                <Ionicons name="time-outline" size={11} color={colors.mutedForeground} />
-                <Text style={[styles.programTime, { color: colors.mutedForeground }]}>{p.duration}</Text>
-              </View>
-              <View style={styles.programMeta}>
-                <Ionicons name="flame-outline" size={11} color={colors.mutedForeground} />
-                <Text style={[styles.programTime, { color: colors.mutedForeground }]}>{p.totalCal} kcal</Text>
-              </View>
+        {/* ── Search ── */}
+        <View style={styles.searchWrap}>
+          <Ionicons name="search-outline" size={16} color={MUTED} />
+          <TextInput
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="Search for a workout..."
+            placeholderTextColor={MUTED}
+            style={styles.searchInput}
+          />
+          {searchText.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchText("")}>
+              <Ionicons name="close-circle" size={16} color={MUTED} />
             </TouchableOpacity>
-          ))}
+          )}
+        </View>
+
+        {/* ── Workout Category ── */}
+        <View style={styles.sectionRow}>
+          <Text style={styles.sectionTitle}>Workout Category</Text>
+          <TouchableOpacity><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>
+          {CATEGORIES.map((cat) => {
+            const active = activeCategory === cat.key;
+            return (
+              <TouchableOpacity
+                key={cat.key}
+                onPress={() => { Haptics.selectionAsync(); setActiveCategory(cat.key); }}
+                style={[styles.categoryPill, { backgroundColor: active ? cat.color : CARD }, active && { shadowColor: cat.color, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }]}
+              >
+                <View style={[styles.catIconWrap, { backgroundColor: active ? "rgba(255,255,255,0.25)" : cat.bg }]}>
+                  <Ionicons name={cat.icon as any} size={18} color={active ? "#fff" : cat.color} />
+                </View>
+                <Text style={[styles.catLabel, { color: active ? "#fff" : TEXT }]}>{cat.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
-        {/* Exercises for selected program */}
-        {selectedProgram && selectedProgram.exercises.length > 0 && (
-          <>
-            <View style={styles.exHeader}>
-              <Text style={[styles.exHeaderTitle, { color: colors.foreground }]}>
-                {selectedProgram.name} — {selectedProgram.exercises.length} exercises
+        {/* ── Featured Workout ── */}
+        <Text style={[styles.sectionTitle, { marginTop: 6 }]}>Featured Workout</Text>
+        <View style={styles.featuredCard}>
+          <LinearGradient
+            colors={[DARK_CARD_FROM, DARK_CARD_TO]}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          {/* Decorative accent blobs */}
+          <View style={[styles.blob, { top: -30, right: -30, backgroundColor: ORANGE + "30" }]} />
+          <View style={[styles.blob, { bottom: -40, left: -20, backgroundColor: "#8B5CF640", width: 120, height: 120 }]} />
+
+          <View style={styles.featuredTop}>
+            <View style={styles.beginnerBadge}>
+              <Text style={styles.beginnerText}>Beginner</Text>
+            </View>
+            <TouchableOpacity style={styles.bookmarkBtn}>
+              <Ionicons name="bookmark-outline" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.featuredBody}>
+            <Text style={styles.featuredTitle}>
+              {activeDays[0]?.focus ? `${activeDays[0].focus} Workout` : "Full Body Training"}
+            </Text>
+            <View style={styles.coachRow}>
+              <View style={styles.coachAvatarSmall}>
+                <Ionicons name="person" size={12} color="#fff" />
+              </View>
+              <Text style={styles.coachName}>
+                {activeGoal ? `Goal: ${activeGoal}` : "Coach Arnold White"}
               </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  addWorkout({ name: selectedProgram.name, date: new Date().toISOString().split("T")[0], duration: 55, exercises: [], calories: selectedProgram.totalCal });
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  Alert.alert("✓ Logged!", `${selectedProgram.name} recorded.`);
-                }}
-                style={[styles.logAllBtn, { backgroundColor: colors.primary }]}
-              >
-                <Ionicons name="checkmark" size={14} color="#fff" />
-                <Text style={styles.logAllText}>Log All</Text>
-              </TouchableOpacity>
             </View>
-            {selectedProgram.exercises.map((ex) => (
-              <TouchableOpacity
-                key={ex.name}
-                onPress={() => { Haptics.selectionAsync(); setExpandedEx(expandedEx === ex.name ? null : ex.name); }}
-                activeOpacity={0.85}
-                style={[styles.exCard, { backgroundColor: colors.card, ...colors.shadow.soft }]}
-              >
-                <View style={styles.exTop}>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.exTitleRow}>
-                      <Text style={[styles.exName, { color: colors.foreground }]}>{ex.name}</Text>
-                      <View style={[styles.diffTag, { backgroundColor: (DIFF_COLOR[ex.difficulty] ?? "#aaa") + "18" }]}>
-                        <Text style={[styles.diffText, { color: DIFF_COLOR[ex.difficulty] ?? "#aaa" }]}>{ex.difficulty}</Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.exMuscle, { color: colors.mutedForeground }]}>{ex.muscle}</Text>
-                  </View>
-                  <Ionicons name={expandedEx === ex.name ? "chevron-up" : "chevron-down"} size={16} color={colors.mutedForeground} />
-                </View>
-                <View style={styles.exChips}>
-                  <ExChip label={`${ex.sets} sets`} color={colors.primary} />
-                  <ExChip label={`${ex.reps} reps`} color={colors.primary} />
-                  <ExChip label={ex.rest} color={colors.mutedForeground} />
-                  <ExChip label={`~${ex.calories} kcal`} color={colors.red} />
-                </View>
-                {expandedEx === ex.name && (
-                  <View style={[styles.tipBox, { backgroundColor: colors.primary + "10", borderLeftColor: colors.primary }]}>
-                    <Ionicons name="bulb-outline" size={13} color={colors.primary} />
-                    <Text style={[styles.tipText, { color: colors.foreground }]}>{ex.tip || ex.instructions?.[0] || "Focus on proper form throughout."}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </>
-        )}
-
-        {/* AI Onboarding prompt if no plan yet */}
-        {!dynamicPlan && !token && (
-          <View style={[styles.aiPromptCard, { backgroundColor: colors.card, ...colors.shadow.soft }]}>
-            <Ionicons name="sparkles" size={28} color={colors.primary} />
-            <Text style={[styles.aiPromptTitle, { color: colors.foreground }]}>Get a personalised plan</Text>
-            <Text style={[styles.aiPromptSub, { color: colors.mutedForeground }]}>Log in to unlock AI-generated workouts tailored to your body composition.</Text>
-          </View>
-        )}
-
-        {/* Recent */}
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Recent Workouts</Text>
-        {recentWorkouts.length === 0 ? (
-          <View style={[styles.emptyCard, { backgroundColor: colors.card, ...colors.shadow.soft }]}>
-            <Ionicons name="barbell-outline" size={32} color={colors.mutedForeground} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No workouts yet. Start your first one!</Text>
-          </View>
-        ) : (
-          recentWorkouts.slice(0, 5).map((w) => (
-            <View key={w.id} style={[styles.recentCard, { backgroundColor: colors.card, ...colors.shadow.soft }]}>
-              <View style={[styles.recentIcon, { backgroundColor: colors.primary + "15" }]}>
-                <Ionicons name="barbell" size={20} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.recentName, { color: colors.foreground }]}>{w.name}</Text>
-                <Text style={[styles.recentMeta, { color: colors.mutedForeground }]}>{w.date} · {w.duration} min</Text>
-              </View>
-              <View style={styles.recentRight}>
-                <Text style={[styles.recentCal, { color: colors.primary }]}>{w.calories}</Text>
-                <Text style={[styles.recentCalLabel, { color: colors.mutedForeground }]}>kcal</Text>
-              </View>
+            <View style={styles.featuredStats}>
+              <FeaturedStat icon="flame" value={`${activeDays[0]?.estimatedCalories ?? 340}`} label="kcal" color="#FF6B35" />
+              <FeaturedStat icon="time-outline" value={activeDays[0]?.estimatedDuration ?? "50 min"} label="minutes" color="rgba(255,255,255,0.7)" />
+              <FeaturedStat icon="star" value={`+${activeDays.length}`} label="days" color="#8B5CF6" />
             </View>
-          ))
-        )}
-      </ScrollView>
-
-      {/* Log workout modal */}
-      <Modal visible={showModal} transparent animationType="slide">
-        <View style={styles.overlay}>
-          <View style={[styles.sheet, { backgroundColor: colors.card }]}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.sheetTitle, { color: colors.foreground }]}>Quick Log Workout</Text>
-            <TextInput
-              value={workoutName}
-              onChangeText={setWorkoutName}
-              placeholder="Workout name (e.g. Push Day)"
-              placeholderTextColor={colors.mutedForeground}
-              style={[styles.sheetInput, { color: colors.foreground, backgroundColor: colors.muted, borderColor: colors.border }]}
-            />
-            <TouchableOpacity onPress={logWorkout} style={[styles.sheetBtn, { backgroundColor: colors.primary }]}>
-              <Text style={styles.sheetBtnText}>Log Workout</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShowModal(false)} style={styles.sheetCancel}>
-              <Text style={[styles.sheetCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
-            </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+
+        {/* ── My Plan ── */}
+        <View style={styles.sectionRow}>
+          <Text style={styles.sectionTitle}>My Active Workout</Text>
+          {token && (
+            <TouchableOpacity onPress={handleChangeWorkout}>
+              <Text style={[styles.seeAll, { color: ORANGE }]}>Change</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {activeDays.map((day: any, idx: number) => (
+          <ActiveWorkoutItem
+            key={day.dayName}
+            day={day}
+            index={idx}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPlaylistDay(day); }}
+          />
+        ))}
+
+        {activeDays.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Ionicons name="barbell-outline" size={32} color={MUTED} />
+            <Text style={styles.emptyText}>No workout days yet. Complete onboarding to get your plan.</Text>
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 }
 
-function StratPill({ label, color }: { label: string; color: string }) {
-  return (
-    <View style={[stratPillStyles.pill, { backgroundColor: color + "18" }]}>
-      <Text style={[stratPillStyles.text, { color }]}>{label}</Text>
-    </View>
-  );
-}
-const stratPillStyles = StyleSheet.create({
-  pill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  text: { fontSize: 11, fontFamily: "Inter_500Medium" },
-});
+// ─── Featured Stat ────────────────────────────────────────────────────────────
 
-function HeroStat({ icon, value, label }: { icon: any; value: string; label: string }) {
+function FeaturedStat({ icon, value, label, color }: any) {
   return (
-    <View style={styles.heroStatItem}>
-      <Ionicons name={icon} size={14} color="rgba(255,255,255,0.6)" />
-      <Text style={styles.heroStatVal}>{value}</Text>
-      <Text style={styles.heroStatLabel}>{label}</Text>
+    <View style={styles.featStatItem}>
+      <Ionicons name={icon} size={14} color={color} />
+      <Text style={styles.featStatVal}>{value}</Text>
+      <Text style={styles.featStatLabel}>{label}</Text>
     </View>
   );
 }
 
-function ExChip({ label, color }: { label: string; color: string }) {
+// ─── Active Workout Item (My Active Workout list) ─────────────────────────────
+
+function ActiveWorkoutItem({ day, index, onPress }: any) {
+  const dayColor = day.isCardio ? "#22C55E" : ORANGE;
+  const totalEx = day.exercises?.length ?? 0;
+  const totalCal = day.estimatedCalories ?? 0;
+
   return (
-    <View style={[styles.exChip, { backgroundColor: color + "12" }]}>
-      <Text style={[styles.exChipText, { color }]}>{label}</Text>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={styles.activeItem}>
+      {/* Left accent stripe */}
+      <View style={[styles.activeStripe, { backgroundColor: dayColor }]} />
+
+      {/* Icon */}
+      <View style={[styles.activeIconWrap, { backgroundColor: dayColor + "15" }]}>
+        <Ionicons name={day.isCardio ? "flame" : "barbell"} size={22} color={dayColor} />
+      </View>
+
+      {/* Content */}
+      <View style={{ flex: 1 }}>
+        <Text style={styles.activeName}>{day.focus}</Text>
+        <View style={styles.activeMetaRow}>
+          {totalCal > 0 && (
+            <View style={styles.activePill}>
+              <Ionicons name="flame-outline" size={10} color={MUTED} />
+              <Text style={styles.activePillText}>{totalCal} kcal</Text>
+            </View>
+          )}
+          {totalEx > 0 && (
+            <View style={styles.activePill}>
+              <Ionicons name="layers-outline" size={10} color={MUTED} />
+              <Text style={styles.activePillText}>{totalEx} exercises</Text>
+            </View>
+          )}
+          <View style={[styles.activePill, { backgroundColor: day.isCardio ? "#22C55E12" : ORANGE_SOFT }]}>
+            <Text style={[styles.activePillText, { color: dayColor, fontFamily: "Inter_600SemiBold" }]}>
+              {day.dayName}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.activeProgressBar}>
+          <View style={[styles.activeProgressFill, { backgroundColor: dayColor, width: `${Math.min(100, (index + 1) * 15)}%` }]} />
+        </View>
+      </View>
+
+      <Ionicons name="chevron-forward" size={18} color={MUTED} />
+    </TouchableOpacity>
+  );
+}
+
+// ─── Playlist View (Screenshot 1) ────────────────────────────────────────────
+
+function PlaylistView({ day, topPad, insets, onBack, addWorkout }: any) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const handleLogAll = () => {
+    addWorkout({
+      name: day.focus,
+      date: new Date().toISOString().split("T")[0],
+      duration: 55,
+      exercises: [],
+      calories: day.estimatedCalories ?? 300,
+    });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert("✓ Logged!", `${day.focus} recorded in your history.`);
+  };
+
+  return (
+    <View style={[styles.root, { backgroundColor: CARD }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: insets.bottom + 100 }}
+      >
+        {/* ── Playlist Header ── */}
+        <View style={styles.playlistHeader}>
+          <TouchableOpacity onPress={onBack} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Ionicons name="chevron-back" size={24} color={TEXT} />
+          </TouchableOpacity>
+          <View style={{ flex: 1, marginLeft: 4 }}>
+            <Text style={styles.playlistTitle}>Workout Playlist</Text>
+            <Text style={styles.playlistSub} numberOfLines={2}>
+              Workout playlist for {day.focus} · {day.estimatedDuration ?? "45 min"}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleLogAll}
+            style={[styles.logAllBtn, { backgroundColor: ORANGE }]}
+          >
+            <Ionicons name="checkmark" size={14} color="#fff" />
+            <Text style={styles.logAllText}>Log All</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Stats strip ── */}
+        <View style={[styles.statsStrip, { borderColor: "#F0F0F0" }]}>
+          <StripStat icon="time-outline" label={day.estimatedDuration ?? "45 min"} />
+          <View style={styles.stripDivider} />
+          <StripStat icon="flame-outline" label={`${day.estimatedCalories ?? 0} kcal`} color={ORANGE} />
+          <View style={styles.stripDivider} />
+          <StripStat icon="layers-outline" label={`${day.exercises?.length ?? 0} exercises`} />
+        </View>
+
+        {/* ── Exercise list ── */}
+        <View style={styles.playlistList}>
+          {(day.exercises ?? []).map((ex: any, idx: number) => (
+            <PlaylistItem
+              key={ex.id + idx}
+              exercise={ex}
+              partNumber={idx + 1}
+              expanded={expandedId === ex.id}
+              onToggle={() => { Haptics.selectionAsync(); setExpandedId(expandedId === ex.id ? null : ex.id); }}
+            />
+          ))}
+
+          {day.isCardio && day.exercises?.length === 0 && (
+            <View style={styles.cardioCard}>
+              <Ionicons name="bicycle" size={40} color={ORANGE} />
+              <Text style={styles.cardioTitle}>Cardio Session</Text>
+              <Text style={styles.cardioSub}>Choose your preferred activity — treadmill, bike, or jump rope. Aim for 65–75% max heart rate for {day.estimatedDuration ?? "30 min"}.</Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </View>
   );
 }
+
+function StripStat({ icon, label, color = MUTED }: any) {
+  return (
+    <View style={styles.stripStat}>
+      <Ionicons name={icon} size={14} color={color} />
+      <Text style={[styles.stripStatText, { color }]}>{label}</Text>
+    </View>
+  );
+}
+
+// ─── Playlist Item (Part N exercise card) ─────────────────────────────────────
+
+function PlaylistItem({ exercise: ex, partNumber, expanded, onToggle }: any) {
+  const diffColor = DIFF_COLOR[ex.difficulty] ?? MUTED;
+  const totalCal = (ex.estimatedCaloriesPerSet ?? 12) * (ex.sets ?? 3);
+
+  return (
+    <TouchableOpacity onPress={onToggle} activeOpacity={0.85} style={styles.playlistItem}>
+      {/* Left: exercise image */}
+      <View style={styles.playlistImgWrap}>
+        {ex.gifUrl ? (
+          <Image source={{ uri: ex.gifUrl }} style={styles.playlistImg} resizeMode="cover" />
+        ) : (
+          <LinearGradient
+            colors={[ORANGE + "25", ORANGE + "08"]}
+            style={[styles.playlistImg, styles.playlistImgPlaceholder]}
+          >
+            <Ionicons name="barbell" size={22} color={ORANGE} />
+          </LinearGradient>
+        )}
+      </View>
+
+      {/* Center: part label + name + meta */}
+      <View style={styles.playlistContent}>
+        <Text style={styles.partLabel}>Part {partNumber}</Text>
+        <Text style={styles.playlistName} numberOfLines={2}>{ex.name}</Text>
+        <View style={styles.playlistMeta}>
+          <Text style={styles.playlistMetaText}>
+            {ex.sets ?? 3} sets · {ex.repsRange ?? "10–12"}
+          </Text>
+          <Text style={styles.playlistMetaDot}> · </Text>
+          <Text style={styles.playlistMetaText}>{ex.target || ex.bodyPart}</Text>
+        </View>
+        <View style={styles.playlistTags}>
+          <View style={[styles.playlistTag, { backgroundColor: diffColor + "18" }]}>
+            <Text style={[styles.playlistTagText, { color: diffColor }]}>{ex.difficulty}</Text>
+          </View>
+          <View style={[styles.playlistTag, { backgroundColor: ORANGE_SOFT }]}>
+            <Ionicons name="flame-outline" size={9} color={ORANGE} />
+            <Text style={[styles.playlistTagText, { color: ORANGE }]}>~{totalCal} kcal</Text>
+          </View>
+          <View style={[styles.playlistTag, { backgroundColor: "#F0F0F5" }]}>
+            <Text style={styles.playlistTagText}>{ex.equipment || "Body weight"}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Right: chevron */}
+      <View style={styles.playlistChevron}>
+        <Ionicons name={expanded ? "chevron-up" : "chevron-forward"} size={18} color={MUTED} />
+      </View>
+
+      {/* Expanded: stats bar + instructions */}
+      {expanded && (
+        <View style={styles.playlistExpanded}>
+          {/* Stats bar */}
+          <View style={styles.playlistStatsRow}>
+            <PlaylistStat label="Sets" value={String(ex.sets ?? 3)} color={ORANGE} />
+            <View style={styles.statDivider} />
+            <PlaylistStat label="Reps" value={ex.repsRange ?? "10–12"} color={ORANGE} />
+            <View style={styles.statDivider} />
+            <PlaylistStat label="Rest" value={ex.restSeconds ? `${ex.restSeconds}s` : "60s"} />
+            <View style={styles.statDivider} />
+            <PlaylistStat label="Kcal" value={`~${totalCal}`} color="#FF4D00" />
+          </View>
+
+          {/* Instructions */}
+          {ex.instructions?.length > 0 && (
+            <View style={styles.instructionWrap}>
+              {ex.instructions.slice(0, 4).map((inst: string, i: number) => (
+                <View key={i} style={styles.instructionRow}>
+                  <View style={[styles.instrNum, { backgroundColor: ORANGE }]}>
+                    <Text style={styles.instrNumText}>{i + 1}</Text>
+                  </View>
+                  <Text style={styles.instrText}>{inst}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Secondary muscles */}
+          {ex.secondaryMuscles?.length > 0 && (
+            <View style={styles.secondaryWrap}>
+              <Ionicons name="git-branch-outline" size={11} color={MUTED} />
+              <Text style={styles.secondaryText}>
+                Also works: {ex.secondaryMuscles.slice(0, 4).join(", ")}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+function PlaylistStat({ label, value, color = MUTED }: any) {
+  return (
+    <View style={styles.pStat}>
+      <Text style={[styles.pStatVal, { color }]}>{value}</Text>
+      <Text style={styles.pStatLabel}>{label}</Text>
+    </View>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll: { paddingHorizontal: 16, gap: 16 },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  headerTitle: { fontSize: 26, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
-  headerSub: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 },
-  goalBadge: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, marginTop: 6 },
-  goalBadgeText: { fontSize: 11, fontFamily: "Inter_500Medium" },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
-  changeBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12 },
-  changeBtnText: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  planBtn: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
+  root: { flex: 1 },
+  loader: { flex: 1, alignItems: "center", justifyContent: "center" },
+  scroll: { paddingHorizontal: 20, gap: 14 },
 
-  strategyBanner: { borderRadius: 16, padding: 14, overflow: "hidden" },
-  strategyBannerContent: { gap: 8 },
-  strategyBannerTitle: { fontSize: 16, fontFamily: "Inter_700Bold" },
-  strategyBannerSub: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  strategyBannerPills: { flexDirection: "row", gap: 6 },
+  // Header
+  header: { flexDirection: "row", alignItems: "center", gap: 10 },
+  avatarWrap: {},
+  avatar: { width: 40, height: 40, borderRadius: 20 },
+  avatarFallback: { backgroundColor: ORANGE, alignItems: "center", justifyContent: "center" },
+  avatarLetter: { color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" },
+  headerTitle: { flex: 1, textAlign: "center", fontSize: 18, fontFamily: "Inter_700Bold", color: TEXT },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 6 },
+  iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: CARD, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  notifDot: { position: "absolute", top: 8, right: 8, width: 7, height: 7, borderRadius: 4, backgroundColor: ORANGE, borderWidth: 1.5, borderColor: BG },
 
-  heroCard: { borderRadius: 20, overflow: "hidden" },
-  heroGrad: { padding: 20, minHeight: 220, justifyContent: "space-between" },
-  heroBadgeRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  heroBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
-  heroBadgeText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 1 },
-  heroSettings: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
-  heroBody: { gap: 8 },
-  heroTitle: { color: "#fff", fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
-  heroTrainer: { color: "rgba(255,255,255,0.65)", fontSize: 13, fontFamily: "Inter_400Regular" },
-  heroStatsRow: { flexDirection: "row", gap: 20, marginVertical: 4 },
-  heroStatItem: { alignItems: "flex-start", gap: 2 },
-  heroStatVal: { color: "#fff", fontSize: 15, fontFamily: "Inter_700Bold" },
-  heroStatLabel: { color: "rgba(255,255,255,0.55)", fontSize: 11, fontFamily: "Inter_400Regular" },
-  heroBtns: { flexDirection: "row", gap: 10, marginTop: 4 },
-  detailsBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" },
-  detailsText: { color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  startBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 12 },
-  startText: { color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  // Search
+  searchWrap: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: CARD, borderRadius: 14, paddingHorizontal: 14, height: 48, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: TEXT },
 
-  sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: -6 },
-  programList: { gap: 10, paddingRight: 16 },
-  programCard: { width: 155, borderRadius: 16, padding: 14, gap: 6, overflow: "hidden" },
-  programIconWrap: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", marginBottom: 4 },
-  programName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  programDesc: { fontSize: 11, fontFamily: "Inter_400Regular" },
-  programMeta: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 },
-  programTime: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  // Section row
+  sectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: -4 },
+  sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: TEXT },
+  seeAll: { fontSize: 13, fontFamily: "Inter_500Medium", color: MUTED },
 
-  exHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  exHeaderTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  logAllBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  // Categories
+  categoryList: { gap: 10, paddingBottom: 4, paddingRight: 20 },
+  categoryPill: { alignItems: "center", gap: 6, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 16, minWidth: 80, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 },
+  catIconWrap: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  catLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+
+  // Featured card
+  featuredCard: { height: 220, borderRadius: 24, overflow: "hidden", justifyContent: "space-between", padding: 18 },
+  blob: { position: "absolute", width: 100, height: 100, borderRadius: 50 },
+  featuredTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  beginnerBadge: { backgroundColor: "rgba(255,255,255,0.18)", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" },
+  beginnerText: { color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.3 },
+  bookmarkBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
+  featuredBody: { gap: 8 },
+  featuredTitle: { color: "#fff", fontSize: 26, fontFamily: "Inter_700Bold", letterSpacing: -0.4, lineHeight: 32 },
+  coachRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+  coachAvatarSmall: { width: 20, height: 20, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.25)", alignItems: "center", justifyContent: "center" },
+  coachName: { color: "rgba(255,255,255,0.65)", fontSize: 12, fontFamily: "Inter_400Regular" },
+  featuredStats: { flexDirection: "row", gap: 18 },
+  featStatItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  featStatVal: { color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" },
+  featStatLabel: { color: "rgba(255,255,255,0.5)", fontSize: 11, fontFamily: "Inter_400Regular" },
+
+  // Active workout items
+  activeItem: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: CARD, borderRadius: 16, padding: 14, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, elevation: 1, overflow: "hidden" },
+  activeStripe: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3, borderTopLeftRadius: 16, borderBottomLeftRadius: 16 },
+  activeIconWrap: { width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center" },
+  activeName: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: TEXT },
+  activeMetaRow: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 4 },
+  activePill: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#F3F4F6", paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
+  activePillText: { fontSize: 10, fontFamily: "Inter_400Regular", color: MUTED },
+  activeProgressBar: { height: 3, borderRadius: 2, backgroundColor: "#F0F0F5", marginTop: 8, overflow: "hidden" },
+  activeProgressFill: { height: 3, borderRadius: 2 },
+
+  emptyCard: { backgroundColor: CARD, borderRadius: 16, padding: 32, alignItems: "center", gap: 10 },
+  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", color: MUTED, textAlign: "center" },
+
+  // Playlist view
+  playlistHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingHorizontal: 20, paddingBottom: 16 },
+  backBtn: { paddingTop: 2 },
+  playlistTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: TEXT, lineHeight: 30 },
+  playlistSub: { fontSize: 13, fontFamily: "Inter_400Regular", color: MUTED, marginTop: 3, lineHeight: 20 },
+  logAllBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, marginTop: 2 },
   logAllText: { color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  exCard: { borderRadius: 16, padding: 14, gap: 8, marginBottom: 4 },
-  exTop: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  exTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  exName: { fontSize: 15, fontFamily: "Inter_600SemiBold", flex: 1 },
-  exMuscle: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
-  diffTag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  diffText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
-  exChips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  exChip: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
-  exChipText: { fontSize: 11, fontFamily: "Inter_500Medium" },
-  tipBox: { flexDirection: "row", gap: 6, alignItems: "flex-start", padding: 10, borderRadius: 10, borderLeftWidth: 3 },
-  tipText: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1 },
 
-  aiPromptCard: { borderRadius: 16, padding: 20, alignItems: "center", gap: 10 },
-  aiPromptTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
-  aiPromptSub: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 },
+  statsStrip: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", borderTopWidth: 1, borderBottomWidth: 1, paddingVertical: 12, marginHorizontal: 20, marginBottom: 8 },
+  stripStat: { flexDirection: "row", alignItems: "center", gap: 5 },
+  stripStatText: { fontSize: 13, fontFamily: "Inter_500Medium", color: MUTED },
+  stripDivider: { width: 1, height: 16, backgroundColor: "#E8E8EE" },
 
-  emptyCard: { borderRadius: 16, padding: 32, alignItems: "center", gap: 10 },
-  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
-  recentCard: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, marginBottom: 4 },
-  recentIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  recentName: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  recentMeta: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
-  recentRight: { alignItems: "flex-end" },
-  recentCal: { fontSize: 18, fontFamily: "Inter_700Bold" },
-  recentCalLabel: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  playlistList: { paddingHorizontal: 20, gap: 0 },
 
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, gap: 14 },
-  sheetHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 4 },
-  sheetTitle: { fontSize: 20, fontFamily: "Inter_700Bold" },
-  sheetInput: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 15, fontFamily: "Inter_400Regular" },
-  sheetBtn: { height: 52, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  sheetBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },
-  sheetCancel: { alignItems: "center", padding: 8 },
-  sheetCancelText: { fontSize: 15, fontFamily: "Inter_400Regular" },
+  // Playlist item
+  playlistItem: { paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: "#F0F0F5", flexDirection: "row", flexWrap: "wrap", gap: 12, alignItems: "flex-start" },
+  playlistImgWrap: {},
+  playlistImg: { width: 72, height: 72, borderRadius: 14 },
+  playlistImgPlaceholder: { alignItems: "center", justifyContent: "center" },
+  playlistContent: { flex: 1, gap: 4 },
+  partLabel: { fontSize: 11, fontFamily: "Inter_700Bold", color: ORANGE, letterSpacing: 0.3, textTransform: "uppercase" },
+  playlistName: { fontSize: 15, fontFamily: "Inter_700Bold", color: TEXT, lineHeight: 21 },
+  playlistMeta: { flexDirection: "row", alignItems: "center" },
+  playlistMetaText: { fontSize: 12, fontFamily: "Inter_400Regular", color: MUTED },
+  playlistMetaDot: { fontSize: 12, color: MUTED },
+  playlistTags: { flexDirection: "row", flexWrap: "wrap", gap: 5 },
+  playlistTag: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
+  playlistTagText: { fontSize: 10, fontFamily: "Inter_500Medium", color: MUTED },
+  playlistChevron: { paddingTop: 26 },
+
+  // Expanded section within playlist item
+  playlistExpanded: { width: "100%", gap: 12, paddingTop: 4 },
+  playlistStatsRow: { flexDirection: "row", backgroundColor: BG, borderRadius: 12, paddingVertical: 10 },
+  statDivider: { width: 1, backgroundColor: "#E0E0E8", marginVertical: 4 },
+  pStat: { flex: 1, alignItems: "center", gap: 2 },
+  pStatVal: { fontSize: 13, fontFamily: "Inter_700Bold", color: TEXT },
+  pStatLabel: { fontSize: 9, fontFamily: "Inter_400Regular", color: MUTED, textTransform: "uppercase", letterSpacing: 0.4 },
+
+  instructionWrap: { gap: 8 },
+  instructionRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  instrNum: { width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", marginTop: 1 },
+  instrNumText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" },
+  instrText: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular", color: TEXT, lineHeight: 20 },
+
+  secondaryWrap: { flexDirection: "row", alignItems: "center", gap: 5, paddingTop: 4, borderTopWidth: 1, borderTopColor: "#F0F0F5" },
+  secondaryText: { fontSize: 11, fontFamily: "Inter_400Regular", color: MUTED, flex: 1 },
+
+  cardioCard: { alignItems: "center", gap: 10, padding: 32 },
+  cardioTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: TEXT },
+  cardioSub: { fontSize: 14, fontFamily: "Inter_400Regular", color: MUTED, textAlign: "center", lineHeight: 22 },
 });

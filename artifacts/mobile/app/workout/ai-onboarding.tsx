@@ -676,6 +676,8 @@ function DayCard({ day, colors, goalColor, expanded, expandedEx, onToggle, onTog
 
 function ExerciseItem({ ex, colors, accentColor, expanded, onToggle }: any) {
   const diffColor = DIFF_COLOR[ex.difficulty] ?? colors.mutedForeground;
+  const totalCals = (ex.estimatedCaloriesPerSet ?? 12) * (ex.sets ?? 3);
+  const firstInstruction = ex.instructions?.[0] ?? "";
 
   return (
     <TouchableOpacity
@@ -683,45 +685,107 @@ function ExerciseItem({ ex, colors, accentColor, expanded, onToggle }: any) {
       activeOpacity={0.85}
       style={[styles.exerciseItem, { borderColor: colors.border }]}
     >
+      {/* ── Top row: GIF + name/target/equipment ── */}
       <View style={styles.exerciseItemTop}>
         {ex.gifUrl ? (
-          <Image source={{ uri: ex.gifUrl }} style={styles.exerciseGif} resizeMode="cover" />
+          <Image
+            source={{ uri: ex.gifUrl }}
+            style={styles.exerciseGif}
+            resizeMode="cover"
+          />
         ) : (
           <View style={[styles.exerciseGifPlaceholder, { backgroundColor: accentColor + "15" }]}>
             <Ionicons name="barbell-outline" size={22} color={accentColor} />
           </View>
         )}
-        <View style={{ flex: 1, gap: 3 }}>
-          <Text style={[styles.exerciseName, { color: colors.foreground }]} numberOfLines={2}>{ex.name}</Text>
-          <Text style={[styles.exerciseTarget, { color: colors.mutedForeground }]}>{ex.target} · {ex.equipment}</Text>
-          <View style={styles.exerciseChips}>
-            <ExChip label={`${ex.sets} sets`} color={accentColor} />
-            <ExChip label={ex.repsRange} color={accentColor} />
-            <ExChip label={`${ex.restSeconds}s rest`} color={colors.mutedForeground} />
-            <View style={[styles.diffChip, { backgroundColor: diffColor + "18" }]}>
-              <Text style={[styles.diffChipText, { color: diffColor }]}>{ex.difficulty}</Text>
-            </View>
+
+        <View style={{ flex: 1, gap: 4 }}>
+          {/* Name */}
+          <Text style={[styles.exerciseName, { color: colors.foreground }]} numberOfLines={2}>
+            {ex.name}
+          </Text>
+
+          {/* Target muscle */}
+          <View style={styles.exerciseMetaRow}>
+            <Ionicons name="body-outline" size={11} color={accentColor} />
+            <Text style={[styles.exerciseMetaText, { color: accentColor }]}>
+              {ex.target || ex.bodyPart || "—"}
+            </Text>
+          </View>
+
+          {/* Equipment */}
+          <View style={styles.exerciseMetaRow}>
+            <Ionicons name="barbell-outline" size={11} color={colors.mutedForeground} />
+            <Text style={[styles.exerciseMetaText, { color: colors.mutedForeground }]}>
+              {ex.equipment || "Body weight"}
+            </Text>
           </View>
         </View>
-        <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color={colors.mutedForeground} />
+
+        {/* Difficulty badge + chevron */}
+        <View style={{ alignItems: "flex-end", gap: 6 }}>
+          <View style={[styles.diffChip, { backgroundColor: diffColor + "18" }]}>
+            <Text style={[styles.diffChipText, { color: diffColor }]}>{ex.difficulty}</Text>
+          </View>
+          <Ionicons
+            name={expanded ? "chevron-up" : "chevron-down"}
+            size={14}
+            color={colors.mutedForeground}
+          />
+        </View>
       </View>
 
-      {expanded && ex.instructions?.length > 0 && (
-        <View style={[styles.instructionBox, { backgroundColor: accentColor + "08", borderLeftColor: accentColor }]}>
-          {ex.instructions.slice(0, 3).map((inst: string, i: number) => (
+      {/* ── Stats row: sets · reps · rest · calories ── */}
+      <View style={styles.exerciseStatsRow}>
+        <ExStat icon="layers-outline" label="Sets" value={String(ex.sets ?? 3)} color={accentColor} colors={colors} />
+        <View style={[styles.exerciseStatDivider, { backgroundColor: colors.border }]} />
+        <ExStat icon="repeat-outline" label="Reps" value={ex.repsRange ?? "10–12"} color={accentColor} colors={colors} />
+        <View style={[styles.exerciseStatDivider, { backgroundColor: colors.border }]} />
+        <ExStat icon="time-outline" label="Rest" value={ex.restSeconds ? `${ex.restSeconds}s` : "60s"} color={colors.mutedForeground} colors={colors} />
+        <View style={[styles.exerciseStatDivider, { backgroundColor: colors.border }]} />
+        <ExStat icon="flame-outline" label="Kcal" value={`~${totalCals}`} color="#FF6B35" colors={colors} />
+      </View>
+
+      {/* ── First instruction always visible ── */}
+      {firstInstruction !== "" && (
+        <View style={[styles.instructionPreview, { backgroundColor: accentColor + "08", borderLeftColor: accentColor }]}>
+          <Ionicons name="bulb-outline" size={12} color={accentColor} />
+          <Text style={[styles.instructionPreviewText, { color: colors.foreground }]} numberOfLines={expanded ? undefined : 2}>
+            {firstInstruction}
+          </Text>
+        </View>
+      )}
+
+      {/* ── Expanded: remaining instructions + secondary muscles ── */}
+      {expanded && ex.instructions?.length > 1 && (
+        <View style={[styles.instructionBox, { backgroundColor: accentColor + "06", borderLeftColor: accentColor }]}>
+          {ex.instructions.slice(1, 4).map((inst: string, i: number) => (
             <View key={i} style={styles.instructionRow}>
-              <Text style={[styles.instructionNum, { color: accentColor }]}>{i + 1}.</Text>
+              <Text style={[styles.instructionNum, { color: accentColor }]}>{i + 2}.</Text>
               <Text style={[styles.instructionText, { color: colors.foreground }]}>{inst}</Text>
             </View>
           ))}
           {ex.secondaryMuscles?.length > 0 && (
-            <Text style={[styles.secondaryMuscles, { color: colors.mutedForeground }]}>
-              Also works: {ex.secondaryMuscles.slice(0, 3).join(", ")}
-            </Text>
+            <View style={[styles.secondaryRow, { borderTopColor: colors.border }]}>
+              <Ionicons name="git-branch-outline" size={11} color={colors.mutedForeground} />
+              <Text style={[styles.secondaryMuscles, { color: colors.mutedForeground }]}>
+                Also works: {ex.secondaryMuscles.slice(0, 4).join(", ")}
+              </Text>
+            </View>
           )}
         </View>
       )}
     </TouchableOpacity>
+  );
+}
+
+function ExStat({ icon, label, value, color, colors }: any) {
+  return (
+    <View style={styles.exerciseStatItem}>
+      <Ionicons name={icon} size={12} color={color} />
+      <Text style={[styles.exerciseStatValue, { color: colors.foreground }]}>{value}</Text>
+      <Text style={[styles.exerciseStatLabel, { color: colors.mutedForeground }]}>{label}</Text>
+    </View>
   );
 }
 
@@ -832,11 +896,24 @@ const styles = StyleSheet.create({
   diffChip: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   diffChipText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
 
-  instructionBox: { borderLeftWidth: 3, borderRadius: 8, padding: 10, gap: 6 },
+  exerciseMetaRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  exerciseMetaText: { fontSize: 11, fontFamily: "Inter_500Medium" },
+
+  exerciseStatsRow: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(0,0,0,0.03)", borderRadius: 10, paddingVertical: 8, paddingHorizontal: 4, marginTop: 2 },
+  exerciseStatItem: { flex: 1, alignItems: "center", gap: 2 },
+  exerciseStatValue: { fontSize: 12, fontFamily: "Inter_700Bold" },
+  exerciseStatLabel: { fontSize: 9, fontFamily: "Inter_400Regular", textTransform: "uppercase", letterSpacing: 0.3 },
+  exerciseStatDivider: { width: 1, height: 28, opacity: 0.4 },
+
+  instructionPreview: { flexDirection: "row", gap: 6, alignItems: "flex-start", padding: 9, borderRadius: 8, borderLeftWidth: 2.5, marginTop: 2 },
+  instructionPreviewText: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 18 },
+
+  instructionBox: { borderLeftWidth: 2.5, borderRadius: 8, padding: 10, gap: 6, marginTop: 4 },
   instructionRow: { flexDirection: "row", gap: 6 },
   instructionNum: { fontSize: 12, fontFamily: "Inter_700Bold", minWidth: 16 },
   instructionText: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 18 },
-  secondaryMuscles: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 4 },
+  secondaryRow: { flexDirection: "row", alignItems: "center", gap: 4, borderTopWidth: 0.5, paddingTop: 6, marginTop: 2 },
+  secondaryMuscles: { fontSize: 11, fontFamily: "Inter_400Regular", flex: 1 },
 
   saveBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, height: 56, borderRadius: 16, marginTop: 8 },
   saveBtnText: { color: "#fff", fontSize: 17, fontFamily: "Inter_700Bold" },

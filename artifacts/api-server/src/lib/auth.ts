@@ -28,6 +28,8 @@ if (!JWT_SECRET) {
   throw new Error("JWT_SECRET must be set in your environment");
 }
 
+const jwtSecret: jwt.Secret = JWT_SECRET;
+
 // ─── Supabase ─────────────────────────────────────────────────────────────────
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -47,15 +49,15 @@ export function createJwtToken(user: User, onboardingCompleted: boolean) {
       role: user.primaryRole,
       onboardingCompleted,
     },
-    JWT_SECRET,
+    jwtSecret,
     {
-      expiresIn: JWT_EXPIRES_IN,
+      expiresIn: JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
     },
   );
 }
 
 export function verifyJwtToken(token: string) {
-  return jwt.verify(token, JWT_SECRET) as AuthPayload;
+  return jwt.verify(token, jwtSecret) as unknown as AuthPayload;
 }
 
 // ─── Middleware ───────────────────────────────────────────────────────────────

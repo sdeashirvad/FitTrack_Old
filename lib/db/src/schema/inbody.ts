@@ -43,6 +43,14 @@ export const inbodyReports = pgTable("inbody_reports", {
   /** Human-readable error message when status === "failed" */
   errorMessage: text("error_message"),
 
+  /**
+   * Gemini AI analysis result (JSON).
+   * Contains: overallSummary, fitnessLevel, bodyFatAnalysis, muscleMassAnalysis,
+   *           metabolismInsights, visceralFatAnalysis, strengths, weaknesses,
+   *           healthRisks, recommendations, workoutPlan, dietPlan, goalSuggestions
+   */
+  geminiAnalysis: jsonb("gemini_analysis"),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -94,8 +94,8 @@ export default function HomeScreen() {
           </View>
           <View style={styles.statsRow}>
             <StatPill icon="flame" value={todayLog.calories.toString()} label="kcal" color={colors.primary} />
-            <StatPill icon="location" value={activitySummary.distance.toFixed(1)} label="kilometer" color={colors.mutedForeground} />
-            <StatPill icon="time" value={activitySummary.activeMinutes.toString()} label="minute" color={colors.cyan} />
+             <StatPill icon="location" value={activitySummary.distanceKm.toFixed(1)} label="kilometer" color={colors.mutedForeground} />
+            <StatPill icon="time" value={(activitySummary.walkingMinutes + activitySummary.runningMinutes).toString()} label="minute" color={colors.cyan}/>
           </View>
         </View>
 

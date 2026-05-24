@@ -26,6 +26,8 @@ const SUPABASE_SERVICE_ROLE_KEY =
 const storageClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const BUCKET = "inbody-reports";
+const STORAGE_SETUP_HINT =
+  "Run `pnpm --filter @workspace/api-server run setup-storage` or create the Supabase Storage bucket `inbody-reports`.";
 
 // ─── Upload to Supabase Storage ───────────────────────────────────────────────
 export async function uploadToStorage(
@@ -46,6 +48,10 @@ export async function uploadToStorage(
 
   if (error) {
     logger.error({ error: error.message }, "Supabase Storage upload failed");
+    if (error.message.toLowerCase().includes("bucket not found")) {
+      throw new Error(`Storage bucket '${BUCKET}' was not found. ${STORAGE_SETUP_HINT}`);
+    }
+
     throw new Error(`Storage upload failed: ${error.message}`);
   }
 
@@ -106,7 +112,7 @@ async function runOCRSpaceFallback(fileBuffer: Buffer, mimeType: string, fileNam
   if (!OCR_KEY) throw new Error("OCR_SPACE_API_KEY not set");
 
   const form = new FormData();
-  const blob = new Blob([fileBuffer], { type: mimeType });
+  const blob = new Blob([new Uint8Array(fileBuffer)], { type: mimeType });
   form.append("file", blob, fileName);
   form.append("apikey", OCR_KEY);
   form.append("language", "eng");

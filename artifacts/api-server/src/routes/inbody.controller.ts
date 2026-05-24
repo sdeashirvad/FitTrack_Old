@@ -13,6 +13,45 @@ import { isValidExtraction } from "../lib/inbody-parser";
 import { analyzeWithGemini, type GeminiAnalysis } from "../lib/gemini";
 import type { AuthenticatedRequest } from "../lib/auth";
 
+const TRANSIENT_DB_ERROR_CODES = new Set([
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "ETIMEDOUT",
+]);
+
+async function withTransientDbRetry<T>(operation: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await operation();
+    } catch (err: any) {
+      lastError = err;
+
+      if (!isTransientDbError(err) || attempt === 3) {
+        throw err;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+    }
+  }
+
+  throw lastError;
+}
+
+function isTransientDbError(err: any): boolean {
+  const cause = err?.cause;
+  const message = `${err?.message ?? ""} ${cause?.message ?? ""}`;
+  const code = err?.code ?? cause?.code;
+
+  return (
+    TRANSIENT_DB_ERROR_CODES.has(code) ||
+    [...TRANSIENT_DB_ERROR_CODES].some((entry) => message.includes(entry))
+  );
+}
+
 // ─── POST /api/inbody/upload ──────────────────────────────────────────────────
 export async function uploadInbodyReport(req: AuthenticatedRequest, res: Response) {
   const userId = req.auth!.sub;
@@ -47,18 +86,20 @@ export async function uploadInbodyReport(req: AuthenticatedRequest, res: Respons
   // ── Insert "pending" record ──────────────────────────────────────────────────
   let reportId: string;
   try {
-    const [row] = await db
-      .insert(inbodyReports)
-      .values({
-        userId,
-        reportUrl: "",           // filled after upload
-        fileType: file.mimetype,
-        fileName: file.originalname,
-        status: "processing",
-      })
-      .returning({ id: inbodyReports.id });
+    reportId = await withTransientDbRetry(async () => {
+      const [row] = await db
+        .insert(inbodyReports)
+        .values({
+          userId,
+          reportUrl: "",           // filled after upload
+          fileType: file.mimetype,
+          fileName: file.originalname,
+          status: "processing",
+        })
+        .returning({ id: inbodyReports.id });
 
-    reportId = row.id;
+      return row.id;
+    });
   } catch (err) {
     logger.error({ err }, "Failed to create inbody_reports record");
     return res.status(500).json({ success: false, error: "Database error — could not create report record." });
@@ -113,11 +154,11 @@ export async function uploadInbodyReport(req: AuthenticatedRequest, res: Respons
   // ── Run Gemini AI Analysis ───────────────────────────────────────────────────
   let geminiAnalysis: GeminiAnalysis | null = null;
   try {
-    logger.info({ reportId }, "Starting Gemini AI analysis");
-    geminiAnalysis = await analyzeWithGemini(extractedMetrics);
-    logger.info({ reportId }, "Gemini AI analysis complete");
+    logger.info({ reportId, metricsCount: Object.keys(extractedMetrics).length }, "Starting Groq AI analysis");
+    geminiAnalysis = await analyzeWithGemini(extractedMetrics, undefined, rawText);
+    logger.info({ reportId, hasAnalysis: !!geminiAnalysis }, "Groq AI analysis complete");
   } catch (err: any) {
-    logger.warn({ err: err.message, reportId }, "Gemini analysis failed — continuing without it");
+    logger.warn({ err: err.message, reportId }, "Gemini analysis failed — response will include metrics only");
   }
 
   // ── Persist results ──────────────────────────────────────────────────────────
@@ -128,12 +169,13 @@ export async function uploadInbodyReport(req: AuthenticatedRequest, res: Respons
         reportUrl,
         extractedText: rawText,
         extractedMetrics,
+        geminiAnalysis: geminiAnalysis || undefined,
         status: "done",
         updatedAt: new Date(),
       })
       .where(eq(inbodyReports.id, reportId));
   } catch (err) {
-    logger.error({ err, reportId }, "Failed to persist OCR results");
+    logger.error({ err, reportId }, "Failed to persist results");
   }
 
   logger.info({ userId, reportId, hasGemini: !!geminiAnalysis }, "InBody report processed successfully");
@@ -143,7 +185,7 @@ export async function uploadInbodyReport(req: AuthenticatedRequest, res: Respons
     reportId,
     extractedMetrics,
     extractedText: rawText,
-    geminiAnalysis,
+    geminiAnalysis: geminiAnalysis || null,
   });
 }
 
@@ -175,9 +217,9 @@ export async function analyzeInbodyReport(req: AuthenticatedRequest, res: Respon
 
   // Run Gemini analysis
   try {
-    logger.info({ reportId, userId }, "Starting Gemini AI analysis");
+    logger.info({ reportId, userId }, "Starting Groq AI analysis");
     const analysis = await analyzeWithGemini(metrics);
-    logger.info({ reportId }, "Gemini AI analysis complete");
+    logger.info({ reportId }, "Groq AI analysis complete");
 
     return res.json({
       success: true,
@@ -185,7 +227,7 @@ export async function analyzeInbodyReport(req: AuthenticatedRequest, res: Respon
       analysis,
     });
   } catch (err: any) {
-    logger.error({ err: err.message, reportId }, "Gemini analysis failed");
+    logger.error({ err: err.message, reportId }, "Groq analysis failed");
     return res.status(502).json({ success: false, error: "AI analysis failed. Please try again." });
   }
 }

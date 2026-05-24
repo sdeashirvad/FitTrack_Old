@@ -1,16 +1,22 @@
 /**
- * Gemini AI Service for InBody Analysis
- * --------------------------------------
- * Sends extracted body composition metrics to Google's Gemini AI
- * for intelligent analysis, recommendations, and plan generation.
- *
- * Environment variable: GEMINI_API_KEY
+ * Groq AI Service for InBody Analysis
+ * ------------------------------------
+ * Keeps the existing exported names and response shape while using a compact
+ * prompt/payload to avoid Groq TPM and request-size failures.
  */
 
+import Groq from "groq-sdk";
 import { logger } from "./logger";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const DEFAULT_GROQ_MODEL = "llama-3.1-8b-instant";
+const FALLBACK_GROQ_MODEL = "llama-3.3-70b-versatile";
+const MAX_OCR_CHARS_FOR_AI = 5000;
+const MAX_AI_OUTPUT_TOKENS = 1600;
+const LOG_GROQ_RAW_RESPONSE = process.env.LOG_GROQ_RAW_RESPONSE === "true";
+
+const GROQ_MODEL = selectGroqModel(process.env.GROQ_MODEL);
+const groq = GROQ_API_KEY ? new Groq({ apiKey: GROQ_API_KEY }) : null;
 
 export interface GeminiAnalysis {
   overallSummary: string;
@@ -61,133 +67,242 @@ export interface GeminiAnalysis {
     supplements: string[];
   };
   goalSuggestions: string[];
+  __aiSource?: "groq" | "fallback";
+  __aiModel?: string;
+  __aiRawResponse?: string;
+  __aiUsage?: unknown;
 }
 
-const SYSTEM_PROMPT = `You are an expert fitness analyst and body composition specialist.
-Analyze the provided InBody/body composition report data and generate a comprehensive, personalized fitness analysis.
+type CompactInBodyMetrics = {
+  weight?: string;
+  bmi?: string;
+  bodyFat?: string;
+  skeletalMuscle?: string;
+  age?: string;
+  gender?: string;
+  height?: string;
+};
 
-You MUST respond with valid JSON only — no markdown, no code blocks, no explanatory text.
-The JSON structure must be exactly:
-{
-  "overallSummary": "A 2-3 sentence executive summary of the person's body composition status",
-  "fitnessLevel": "Beginner/Intermediate/Advanced/Elite",
-  "bodyFatAnalysis": {
-    "status": "Low/Normal/High/Very High",
-    "description": "Detailed analysis of body fat percentage",
-    "recommendation": "Specific actionable advice"
-  },
-  "muscleMassAnalysis": {
-    "status": "Low/Average/Above Average/High",
-    "description": "Analysis of skeletal muscle mass relative to body weight",
-    "recommendation": "Specific advice for muscle development"
-  },
-  "metabolismInsights": {
-    "bmr": "Interpretation of basal metabolic rate",
-    "metabolicAge": "Interpretation of metabolic age vs actual age",
-    "description": "Overall metabolic health assessment"
-  },
-  "visceralFatAnalysis": {
-    "level": "Normal/Borderline/High",
-    "risk": "Low/Moderate/High",
-    "recommendation": "Specific advice for visceral fat management"
-  },
-  "strengths": ["List 3-4 body composition strengths"],
-  "weaknesses": ["List 3-4 areas needing improvement"],
-  "healthRisks": ["List any health risk factors identified"],
-  "recommendations": ["List 5-6 specific, actionable recommendations"],
-  "workoutPlan": {
-    "goal": "Primary fitness goal based on analysis",
-    "planType": "e.g. Fat Loss, Muscle Gain, Recomposition, Maintenance",
-    "weeklySchedule": [
-      {"day": "Mon", "focus": "Upper Body Push", "duration": "50 min", "exercises": ["Bench Press 4x8", "OHP 3x10", "Tricep Dips 3x12"]},
-      {"day": "Tue", "focus": "Cardio", "duration": "30 min"},
-      {"day": "Wed", "focus": "Lower Body", "duration": "55 min", "exercises": ["Squats 4x8", "Romanian Deadlift 3x10", "Leg Press 3x12"]},
-      {"day": "Thu", "focus": "Rest"},
-      {"day": "Fri", "focus": "Upper Body Pull", "duration": "50 min", "exercises": ["Deadlift 4x5", "Pull-ups 3x8", "Barbell Row 3x10"]},
-      {"day": "Sat", "focus": "Cardio + Core", "duration": "35 min"},
-      {"day": "Sun", "focus": "Rest"}
-    ],
-    "cardioRecommendation": "Specific cardio advice"
-  },
-  "dietPlan": {
-    "calorieTarget": 1850,
-    "deficit": -350,
-    "protein": 145,
-    "carbs": 185,
-    "fat": 58,
-    "waterLiters": 3.2,
-    "meals": ["Breakfast: specific meal", "Lunch: specific meal", "Snack: specific meal", "Dinner: specific meal"],
-    "supplements": ["Whey Protein", "Creatine", "Vitamin D"]
-  },
-  "goalSuggestions": ["Primary goal", "Secondary goal", "Long-term goal"]
-}
-
-Make all recommendations specific to the person's metrics. Use Indian food examples for diet plans. Be precise with numbers.`;
+const SYSTEM_PROMPT = `You are a concise fitness analyst. Return valid JSON only, no markdown.
+Use InBody metrics to produce a short fitness summary, muscle analysis, fat analysis, recommendations, and health insights.
+Keep every string brief. Preserve this schema exactly:
+{"overallSummary":"","fitnessLevel":"","bodyFatAnalysis":{"status":"","description":"","recommendation":""},"muscleMassAnalysis":{"status":"","description":"","recommendation":""},"metabolismInsights":{"bmr":"","metabolicAge":"","description":""},"visceralFatAnalysis":{"level":"","risk":"","recommendation":""},"strengths":[""],"weaknesses":[""],"healthRisks":[""],"recommendations":[""],"workoutPlan":{"goal":"","planType":"","weeklySchedule":[{"day":"","focus":"","duration":"","exercises":[""]}],"cardioRecommendation":""},"dietPlan":{"calorieTarget":0,"deficit":0,"protein":0,"carbs":0,"fat":0,"waterLiters":0,"meals":[""],"supplements":[""]},"goalSuggestions":[""]}`;
 
 export async function analyzeWithGemini(
   metrics: Record<string, string | undefined>,
   userProfile?: { age?: number; gender?: string; height?: string; fitnessGoal?: string },
+  rawOCRText = "",
 ): Promise<GeminiAnalysis> {
-  if (!GEMINI_API_KEY) {
-    logger.warn("GEMINI_API_KEY not set — returning demo analysis");
-    return getDemoAnalysis(metrics);
+  if (!groq || !GROQ_API_KEY) {
+    logger.warn("GROQ_API_KEY not set; returning demo analysis");
+    return withAiDebug(getDemoAnalysis(metrics), {
+      source: "fallback",
+      model: GROQ_MODEL,
+      rawResponse: "",
+      usage: undefined,
+    });
   }
 
-  const metricsText = Object.entries(metrics)
-    .filter(([, v]) => v !== undefined)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join("\n");
+  const cleanedOCRText = cleanOCRText(rawOCRText);
+  const trimmedOCRText = cleanedOCRText.slice(0, MAX_OCR_CHARS_FOR_AI);
+  const compactMetrics = {
+    ...extractImportantMetricsFromOCR(trimmedOCRText),
+    ...toCompactMetrics(metrics),
+  };
 
-  const profileText = userProfile
-    ? `\nUser Profile:\nAge: ${userProfile.age ?? "unknown"}\nGender: ${userProfile.gender ?? "unknown"}\nHeight: ${userProfile.height ?? "unknown"}\nGoal: ${userProfile.fitnessGoal ?? "unknown"}`
-    : "";
+  const payload = {
+    metrics: compactMetrics,
+    parsedMetrics: metrics,
+    userProfile: userProfile ?? null,
+    ocrExcerpt: hasEnoughCompactMetrics(compactMetrics) ? undefined : trimmedOCRText,
+  };
+  const prompt = `Analyze this InBody report JSON:\n${JSON.stringify(payload)}`;
 
-  const prompt = `Analyze this InBody/body composition report:\n\n${metricsText}${profileText}`;
+  logger.info(
+    {
+      ocrLengthBeforeCleanup: rawOCRText.length,
+      ocrLengthAfterCleanup: cleanedOCRText.length,
+      finalAiPayloadSize: prompt.length,
+      selectedModel: GROQ_MODEL,
+    },
+    "Prepared compact Groq AI payload",
+  );
 
   try {
-    logger.info("Calling Gemini AI for InBody analysis");
-
-    const response = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.9,
-          maxOutputTokens: 4096,
-        },
-      }),
+    const result = await requestGroqAnalysis(prompt, GROQ_MODEL);
+    return withAiDebug(result.analysis, {
+      source: "groq",
+      model: GROQ_MODEL,
+      rawResponse: result.rawResponse,
+      usage: result.usage,
     });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Gemini API error (${response.status}): ${errText}`);
-    }
-
-    const data = (await response.json()) as {
-      candidates: Array<{
-        content: { parts: Array<{ text: string }> };
-      }>;
-    };
-
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-
-    // Extract JSON from response (handle potential markdown wrapping)
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("No valid JSON found in Gemini response");
-    }
-
-    const analysis = JSON.parse(jsonMatch[0]) as GeminiAnalysis;
-    logger.info("Gemini AI analysis complete");
-
-    return analysis;
   } catch (err: any) {
-    logger.error({ err: err.message }, "Gemini AI analysis failed — returning demo");
-    return getDemoAnalysis(metrics);
+    logger.warn(
+      { err: err.message, model: GROQ_MODEL, fallbackModel: FALLBACK_GROQ_MODEL },
+      "Groq AI analysis failed; trying fallback model",
+    );
   }
+
+  try {
+    const result = await requestGroqAnalysis(prompt, FALLBACK_GROQ_MODEL);
+    return withAiDebug(result.analysis, {
+      source: "groq",
+      model: FALLBACK_GROQ_MODEL,
+      rawResponse: result.rawResponse,
+      usage: result.usage,
+    });
+  } catch (err: any) {
+    logger.error(
+      { err: err.message, model: FALLBACK_GROQ_MODEL },
+      "Groq fallback analysis failed; returning demo analysis",
+    );
+    return withAiDebug(getDemoAnalysis(metrics), {
+      source: "fallback",
+      model: FALLBACK_GROQ_MODEL,
+      rawResponse: "",
+      usage: undefined,
+    });
+  }
+}
+
+export function cleanOCRText(text: string): string {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .replace(/[^\x20-\x7E\n%]/g, " ")
+    .replace(/[|_~`^={}\[\]\\<>]/g, " ")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function selectGroqModel(model?: string): string {
+  if (!model || model === "openai/gpt-oss-120b") {
+    return DEFAULT_GROQ_MODEL;
+  }
+
+  return model;
+}
+
+function toCompactMetrics(metrics: Record<string, string | undefined>): CompactInBodyMetrics {
+  return {
+    weight: metrics.weight,
+    bmi: metrics.bmi,
+    bodyFat: metrics.bodyFat,
+    skeletalMuscle: metrics.skeletalMuscleMass,
+  };
+}
+
+function extractImportantMetricsFromOCR(text: string): CompactInBodyMetrics {
+  return {
+    weight: firstMatch(text, [
+      /(?:body\s*)?weight\s*[:\-]?\s*(\d{2,3}(?:\.\d+)?)\s*(?:kg|kgs)?/i,
+    ]),
+    bmi: firstMatch(text, [
+      /\bbmi\s*[:\-]?\s*(\d{2}(?:\.\d+)?)/i,
+      /body\s*mass\s*index\s*[:\-]?\s*(\d{2}(?:\.\d+)?)/i,
+    ]),
+    bodyFat: firstMatch(text, [
+      /(?:body\s*)?fat\s*(?:percentage|percent|%)?\s*[:\-]?\s*(\d{1,2}(?:\.\d+)?)\s*%?/i,
+      /\bpbf\s*[:\-]?\s*(\d{1,2}(?:\.\d+)?)/i,
+    ]),
+    skeletalMuscle: firstMatch(text, [
+      /skeletal\s*muscle\s*mass\s*[:\-]?\s*(\d{1,2}(?:\.\d+)?)\s*(?:kg|kgs)?/i,
+      /\bsmm\s*[:\-]?\s*(\d{1,2}(?:\.\d+)?)\s*(?:kg|kgs)?/i,
+    ]),
+    age: firstMatch(text, [/\bage\s*[:\-]?\s*(\d{1,3})\b/i]),
+    gender: firstMatch(text, [/\b(?:gender|sex)\s*[:\-]?\s*(male|female|m|f)\b/i]),
+    height: firstMatch(text, [
+      /\bheight\s*[:\-]?\s*(\d{2,3}(?:\.\d+)?)\s*(?:cm|cms)?/i,
+    ]),
+  };
+}
+
+function firstMatch(text: string, patterns: RegExp[]): string | undefined {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return undefined;
+}
+
+function hasEnoughCompactMetrics(metrics: CompactInBodyMetrics): boolean {
+  return Object.values(metrics).filter(Boolean).length >= 3;
+}
+
+async function requestGroqAnalysis(
+  prompt: string,
+  model: string,
+): Promise<{ analysis: GeminiAnalysis; rawResponse: string; usage: unknown }> {
+  if (!groq) {
+    throw new Error("Groq client is not configured");
+  }
+
+  logger.info({ selectedModel: model }, "Calling Groq AI for InBody analysis");
+
+  const message = await groq.chat.completions.create({
+    messages: [
+      {
+        role: "system",
+        content: SYSTEM_PROMPT,
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    model,
+    temperature: 0.35,
+    max_tokens: MAX_AI_OUTPUT_TOKENS,
+    top_p: 0.8,
+    response_format: { type: "json_object" },
+  });
+
+  const rawText = message.choices[0]?.message?.content ?? "";
+
+  if (LOG_GROQ_RAW_RESPONSE) {
+    logger.info(
+      {
+        selectedModel: model,
+        groqUsage: message.usage,
+        groqRawResponse: rawText,
+      },
+      "Groq raw model response",
+    );
+  }
+
+  if (!rawText) {
+    throw new Error("No response content from Groq API");
+  }
+
+  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("No valid JSON found in Groq response");
+  }
+
+  return {
+    analysis: JSON.parse(jsonMatch[0]) as GeminiAnalysis,
+    rawResponse: rawText,
+    usage: message.usage,
+  };
+}
+
+function withAiDebug(
+  analysis: GeminiAnalysis,
+  debug: { source: "groq" | "fallback"; model: string; rawResponse: string; usage: unknown },
+): GeminiAnalysis {
+  return {
+    ...analysis,
+    __aiSource: debug.source,
+    __aiModel: debug.model,
+    __aiRawResponse: debug.rawResponse,
+    __aiUsage: debug.usage,
+  };
 }
 
 function getDemoAnalysis(metrics: Record<string, string | undefined>): GeminiAnalysis {
@@ -195,96 +310,87 @@ function getDemoAnalysis(metrics: Record<string, string | undefined>): GeminiAna
   const bodyFat = parseFloat(metrics.bodyFat ?? "22");
   const bmi = parseFloat(metrics.bmi ?? "25");
   const smm = parseFloat(metrics.skeletalMuscleMass ?? "33");
-  const bmr = parseInt(metrics.bmr ?? "1680");
-  const visceralFat = parseInt(metrics.visceralFat ?? "8");
+  const bmr = parseInt(metrics.bmr ?? "1680", 10);
+  const visceralFat = parseInt(metrics.visceralFat ?? "8", 10);
 
   const fatStatus = bodyFat < 15 ? "Low" : bodyFat < 25 ? "Normal" : "High";
   const muscleStatus = smm > 35 ? "Above Average" : smm > 30 ? "Average" : "Low";
   const visceralStatus = visceralFat <= 9 ? "Normal" : "High";
 
   return {
-    overallSummary: `Your body composition shows a ${fatStatus.toLowerCase()} body fat percentage (${bodyFat}%) with ${muscleStatus.toLowerCase()} muscle mass (${smm} kg). ${bmi > 25 ? "BMI indicates slight overweight, but this may be due to higher muscle mass." : "BMI is within healthy range."} Focus on ${bodyFat > 20 ? "fat loss while preserving muscle" : "building lean muscle mass"}.`,
+    overallSummary: `Body composition shows ${fatStatus.toLowerCase()} body fat (${bodyFat}%) with ${muscleStatus.toLowerCase()} skeletal muscle (${smm} kg). Focus on ${bodyFat > 20 ? "fat loss while preserving muscle" : "lean muscle gain and maintenance"}.`,
     fitnessLevel: bodyFat < 15 && smm > 34 ? "Advanced" : bodyFat < 25 ? "Intermediate" : "Beginner",
     bodyFatAnalysis: {
       status: fatStatus,
-      description: `Your body fat percentage of ${bodyFat}% is ${fatStatus.toLowerCase()} for ${bodyFat > 20 ? "males" : "the general population"}. ${bodyFat > 20 ? "Ideal range for males is 10-20%." : "You're within the healthy range."}`,
-      recommendation: bodyFat > 20 ? "Aim for a moderate caloric deficit of 300-400 kcal/day to reduce body fat while preserving muscle mass." : "Maintain current body composition through consistent training and nutrition.",
+      description: `Body fat is ${fatStatus.toLowerCase()} based on the available report values.`,
+      recommendation: bodyFat > 20 ? "Use a moderate calorie deficit and keep protein high." : "Maintain current habits and monitor trends.",
     },
     muscleMassAnalysis: {
       status: muscleStatus,
-      description: `Skeletal muscle mass of ${smm} kg is ${muscleStatus.toLowerCase()} relative to your body weight. ${smm > 33 ? "Good foundation for strength training." : "Room for improvement through progressive overload."}`,
-      recommendation: "Focus on compound lifts (squat, bench, deadlift) with progressive overload. Aim for 1.6-2g protein per kg body weight daily.",
+      description: `Skeletal muscle mass is ${muscleStatus.toLowerCase()} relative to body weight.`,
+      recommendation: "Train with progressive overload 3-5 days per week and target 1.6-2.0 g protein per kg body weight.",
     },
     metabolismInsights: {
-      bmr: `Your BMR of ${bmr} kcal means you burn approximately ${bmr} calories at rest. On active days, total expenditure is around ${Math.round(bmr * 1.55)} kcal.`,
-      metabolicAge: `Based on your BMR and body composition, your metabolic age is in the ${bmr > 1700 ? "young" : "average"} range.`,
-      description: `${bmr > 1600 ? "Healthy metabolic rate." : "Metabolism could be improved through increased muscle mass and activity level."} Building more muscle will naturally increase your BMR.`,
+      bmr: `Estimated BMR is ${bmr} kcal.`,
+      metabolicAge: metrics.metabolicAge ? `Reported metabolic age is ${metrics.metabolicAge}.` : "Metabolic age was not clearly detected.",
+      description: "Improving or preserving muscle mass should support metabolic health.",
     },
     visceralFatAnalysis: {
       level: visceralStatus,
       risk: visceralFat <= 9 ? "Low" : visceralFat <= 12 ? "Moderate" : "High",
-      recommendation: visceralFat > 9 ? "Reduce refined carbohydrates, increase fiber intake, and add 30 minutes of cardio 3-4x per week." : "Maintain current lifestyle. Continue monitoring visceral fat levels.",
+      recommendation: visceralFat > 9 ? "Prioritize daily steps, fiber, sleep, and 2-3 cardio sessions weekly." : "Maintain active lifestyle and monitor visceral fat over time.",
     },
     strengths: [
-      `${muscleStatus} skeletal muscle mass provides a good metabolic foundation`,
-      `${fatStatus} body fat percentage is ${fatStatus === "Normal" ? "within healthy range" : "manageable"}`,
-      `BMR of ${bmr} kcal supports ${bmr > 1600 ? "active" : "moderate"} lifestyle`,
-      "Good potential for body recomposition with proper training and nutrition",
+      `${muscleStatus} skeletal muscle foundation`,
+      `BMR around ${bmr} kcal`,
+      "Enough report data for trend tracking",
     ],
     weaknesses: [
-      bodyFat > 20 ? "Body fat above ideal range — needs focused reduction" : "Body fat could be further optimized",
-      smm < 34 ? "Skeletal muscle mass has room for improvement" : "Maintain and continue building muscle",
-      visceralFat > 9 ? "Visceral fat slightly elevated — lifestyle changes needed" : "Continue monitoring visceral fat",
-      "Overall fitness can be enhanced with structured training",
+      bodyFat > 20 ? "Body fat can be reduced" : "Continue optimizing body composition",
+      smm < 34 ? "Muscle mass can improve" : "Maintain muscle mass",
+      "Consistency will determine progress",
     ],
     healthRisks: [
-      bmi > 25 ? "Elevated BMI — monitor cardiovascular health" : "BMI within acceptable range",
-      bodyFat > 25 ? "Higher body fat increases risk of metabolic syndrome" : "Low metabolic risk profile",
-      visceralFat > 12 ? "Elevated visceral fat — increased health risk" : "Visceral fat within safe limits",
+      bmi > 25 ? "BMI is elevated; interpret alongside muscle mass." : "BMI is within a reasonable range.",
+      visceralFat > 12 ? "Visceral fat may increase metabolic risk." : "Visceral fat appears manageable.",
     ],
     recommendations: [
-      `Target ${bodyFat > 20 ? "fat loss" : "muscle gain"} with a ${bodyFat > 20 ? "300-400 kcal daily deficit" : "200-300 kcal surplus"}`,
-      `Consume ${Math.round(weight * 1.8)}g protein daily to ${bodyFat > 20 ? "preserve muscle during fat loss" : "support muscle growth"}`,
-      "Perform resistance training 4-5x per week focusing on compound movements",
-      `Add ${bodyFat > 20 ? "2-3 cardio sessions (30 min LISS or 20 min HIIT)" : "1-2 light cardio sessions"} per week`,
-      "Drink 3-3.5L water daily and ensure 7-8 hours of quality sleep",
-      "Consider a DEXA scan every 3 months to track body composition changes",
+      `Target ${bodyFat > 20 ? "fat loss" : "lean muscle gain"} for the next 8-12 weeks.`,
+      `Aim for about ${Math.round(weight * 1.8)}g protein daily.`,
+      "Lift weights 3-5 times per week.",
+      "Add 2-3 cardio or brisk walking sessions weekly.",
+      "Sleep 7-8 hours and track weight/body metrics weekly.",
     ],
     workoutPlan: {
-      goal: bodyFat > 20 ? "Fat Loss + Muscle Preservation" : "Muscle Building + Strength",
-      planType: bodyFat > 20 ? "Moderate Cut" : "Lean Bulk",
+      goal: bodyFat > 20 ? "Fat loss with muscle retention" : "Lean muscle gain",
+      planType: bodyFat > 20 ? "Recomposition" : "Lean bulk",
       weeklySchedule: [
-        { day: "Mon", focus: "Upper Body Push", duration: "50 min", exercises: ["Bench Press 4x8", "Overhead Press 3x10", "Incline DB Press 3x12", "Tricep Dips 3x12"] },
-        { day: "Tue", focus: "Cardio LISS", duration: "30 min" },
-        { day: "Wed", focus: "Lower Body", duration: "55 min", exercises: ["Squats 4x8", "Romanian Deadlift 3x10", "Leg Press 3x12", "Calf Raises 4x15"] },
-        { day: "Thu", focus: "Rest / Active Recovery", duration: "—" },
-        { day: "Fri", focus: "Upper Body Pull", duration: "50 min", exercises: ["Deadlift 4x5", "Pull-ups 3x8", "Barbell Row 3x10", "Bicep Curls 3x12"] },
-        { day: "Sat", focus: "Cardio HIIT + Core", duration: "30 min" },
-        { day: "Sun", focus: "Rest", duration: "—" },
+        { day: "Mon", focus: "Upper body strength", duration: "45 min" },
+        { day: "Tue", focus: "Cardio + mobility", duration: "30 min" },
+        { day: "Wed", focus: "Lower body strength", duration: "45 min" },
+        { day: "Fri", focus: "Full body hypertrophy", duration: "45 min" },
       ],
-      cardioRecommendation: bodyFat > 20
-        ? "2-3 sessions per week: 30 min LISS (walking, cycling) or 20 min HIIT (sprint intervals). Do cardio after weights or on separate days."
-        : "1-2 light cardio sessions to maintain cardiovascular health. Focus more on resistance training.",
+      cardioRecommendation: "Use brisk walking, cycling, or incline treadmill 2-3 times per week.",
     },
     dietPlan: {
-      calorieTarget: bodyFat > 20 ? Math.round(bmr * 1.2) : Math.round(bmr * 1.45),
-      deficit: bodyFat > 20 ? -350 : 200,
+      calorieTarget: bodyFat > 20 ? Math.round(bmr * 1.25) : Math.round(bmr * 1.45),
+      deficit: bodyFat > 20 ? -300 : 150,
       protein: Math.round(weight * 1.8),
       carbs: bodyFat > 20 ? Math.round(weight * 2.2) : Math.round(weight * 3),
       fat: Math.round(weight * 0.7),
-      waterLiters: 3.2,
+      waterLiters: 3,
       meals: [
-        "Breakfast: 3 egg whites + 1 whole egg omelette with oats and banana (400 kcal)",
-        "Lunch: Grilled chicken breast (200g) + brown rice (1 cup) + dal + salad (550 kcal)",
-        "Snack: Whey protein shake (1 scoop) + handful of almonds + 1 fruit (250 kcal)",
-        "Dinner: Paneer tikka (150g) + mixed vegetables + 2 roti (450 kcal)",
+        "Breakfast: eggs or paneer with oats/poha",
+        "Lunch: dal/chicken/paneer with rice or roti and salad",
+        "Snack: curd or whey with fruit",
+        "Dinner: lean protein with vegetables and roti",
       ],
-      supplements: ["Whey Protein (post-workout)", "Creatine Monohydrate (5g/day)", "Vitamin D3 (2000 IU)", "Omega-3 Fish Oil (1000mg)"],
+      supplements: ["Whey protein if needed", "Creatine 3-5g/day", "Vitamin D if deficient"],
     },
     goalSuggestions: [
-      bodyFat > 20 ? "Reduce body fat to 18% within 3 months" : "Build lean muscle to reach 35kg SMM",
-      "Improve cardiovascular endurance — run 5km under 25 min",
-      "Achieve consistent 4x/week training for 12 consecutive weeks",
+      bodyFat > 20 ? "Reduce body fat by 2-4% over 12 weeks" : "Increase lean muscle steadily",
+      "Train consistently 4 days per week",
+      "Recheck body composition in 8-12 weeks",
     ],
   };
 }

@@ -52,7 +52,7 @@ interface GeminiAnalysis {
   workoutPlan: {
     goal: string;
     planType: string;
-    weeklySchedule: Array<{ day: string; focus: string; duration?: string; exercises?: string[] }>;
+    weeklySchedule: Array<{ day: string; focus: string; duration?: string; exercises?: string[] } | string>;
     cardioRecommendation: string;
   };
   dietPlan: {
@@ -62,10 +62,14 @@ interface GeminiAnalysis {
     carbs: number;
     fat: number;
     waterLiters: number;
-    meals: string[];
+    meals: Array<string | { name?: string; calories?: number; [key: string]: any }>;
     supplements: string[];
   };
   goalSuggestions: string[];
+  __aiSource?: "groq" | "fallback";
+  __aiModel?: string;
+  __aiRawResponse?: string;
+  __aiUsage?: unknown;
 }
 
 interface ExtractedMetrics {
@@ -259,42 +263,46 @@ export default function InBodyScreen() {
     setAnalyzeProgress(0);
     setError(null);
 
-    // If no token, use demo data to showcase the UI
     if (!token) {
-      const steps = [20, 45, 70, 85, 100];
-      for (const pct of steps) {
-        await new Promise((r) => setTimeout(r, 700));
-        setAnalyzeProgress(pct);
-      }
-      setMetrics(DEMO_METRICS);
-      setGeminiAnalysis(DEMO_ANALYSIS);
-      setPhase("results");
-      setTimeout(() => setShowSmartPopup(true), 600);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setError("Authentication required. Please log in first.");
+      setPhase("upload");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
 
     try {
+      console.log("📤 Starting InBody upload and analysis...");
+      
       const response = await uploadInbodyReport(
         selectedFile.uri,
         selectedFile.mimeType,
         selectedFile.name,
         token,
         (progress) => {
+          console.log(`⏳ Progress: ${progress.step} - ${progress.percent}%`);
           setUploadProgress(progress);
           setAnalyzeProgress(progress.percent);
         },
       );
 
+      console.log("✅ Upload successful. Extracted metrics:", response.extractedMetrics);
       setMetrics(response.extractedMetrics as ExtractedMetrics);
-      setGeminiAnalysis(response.geminiAnalysis as GeminiAnalysis | null);
 
-      if (!response.geminiAnalysis && response.reportId) {
+      // Check if Gemini analysis was included in the response
+      if (response.geminiAnalysis) {
+        console.log("🤖 Gemini analysis received in upload response");
+        setGeminiAnalysis(response.geminiAnalysis as GeminiAnalysis);
+      } else {
+        console.log("⏳ No Gemini analysis in upload response. Fetching separately...");
+        // Try to get analysis from the separate endpoint
         try {
           const analysisResult = await analyzeInbodyReport(response.reportId, token);
+          console.log("🤖 Gemini analysis fetched from analyze endpoint");
           setGeminiAnalysis(analysisResult.analysis as GeminiAnalysis);
-        } catch {
-          setGeminiAnalysis(DEMO_ANALYSIS);
+        } catch (analyzeErr: any) {
+          console.error("❌ Gemini analysis failed:", analyzeErr.message);
+          setError(`AI Analysis unavailable: ${analyzeErr.message}. Showing extracted metrics only.`);
+          // Don't fall back to demo, show real metrics without analysis
         }
       }
 
@@ -302,11 +310,10 @@ export default function InBodyScreen() {
       setTimeout(() => setShowSmartPopup(true), 600);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
-      // Fall back to demo data so the UI is always showcased
-      setMetrics(DEMO_METRICS);
-      setGeminiAnalysis(DEMO_ANALYSIS);
-      setPhase("results");
-      setTimeout(() => setShowSmartPopup(true), 600);
+      console.error("❌ InBody analysis failed:", err.message);
+      setError(`Upload failed: ${err.message}. Please try again.`);
+      setPhase("upload");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
@@ -661,6 +668,19 @@ export default function InBodyScreen() {
                   </Text>
                 </GlassCard>
 
+                <View style={styles.aiSourceRow}>
+                  <View style={[styles.aiDebugBadge, { backgroundColor: geminiAnalysis.__aiSource === "groq" ? colors.green + "18" : colors.orange + "18" }]}>
+                    <Text style={[colors.typography.label, { color: geminiAnalysis.__aiSource === "groq" ? colors.green : colors.orange, fontSize: 10 }]}>
+                      {geminiAnalysis.__aiSource === "groq" ? "AI GENERATED" : "FALLBACK ANALYSIS"}
+                    </Text>
+                  </View>
+                  {geminiAnalysis.__aiModel && (
+                    <Text style={[colors.typography.tiny, { color: colors.mutedForeground }]}>
+                      {geminiAnalysis.__aiModel}
+                    </Text>
+                  )}
+                </View>
+
                 {/* Strengths & Weaknesses */}
                 <View style={styles.swRow}>
                   <GlassCard style={styles.swCard}>
@@ -668,7 +688,9 @@ export default function InBodyScreen() {
                     {geminiAnalysis.strengths.slice(0, 3).map((s, i) => (
                       <View key={i} style={styles.swItem}>
                         <Ionicons name="checkmark-circle" size={14} color={colors.green} />
-                        <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1 }]}>{s}</Text>
+                        <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1 }]}>
+                          {typeof s === "string" ? s : JSON.stringify(s)}
+                        </Text>
                       </View>
                     ))}
                   </GlassCard>
@@ -677,7 +699,9 @@ export default function InBodyScreen() {
                     {geminiAnalysis.weaknesses.slice(0, 3).map((w, i) => (
                       <View key={i} style={styles.swItem}>
                         <Ionicons name="alert-circle" size={14} color={colors.orange} />
-                        <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1 }]}>{w}</Text>
+                        <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1 }]}>
+                          {typeof w === "string" ? w : JSON.stringify(w)}
+                        </Text>
                       </View>
                     ))}
                   </GlassCard>
@@ -747,7 +771,9 @@ export default function InBodyScreen() {
                       <View style={[styles.recoNum, { backgroundColor: colors.primary + "18" }]}>
                         <Text style={[colors.typography.tiny, { color: colors.primary, fontFamily: "Inter_700Bold" }]}>{i + 1}</Text>
                       </View>
-                      <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1, lineHeight: 20 }]}>{r}</Text>
+                      <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1, lineHeight: 20 }]}>
+                        {typeof r === "string" ? r : JSON.stringify(r)}
+                      </Text>
                     </View>
                   ))}
                 </GlassCard>
@@ -805,23 +831,30 @@ export default function InBodyScreen() {
                   {geminiAnalysis.goalSuggestions.map((g, i) => (
                     <View key={i} style={styles.goalRow}>
                       <View style={[styles.goalDot, { backgroundColor: colors.primary }]} />
-                      <Text style={[colors.typography.bodyMedium, { color: colors.foreground, flex: 1, fontSize: 14 }]}>{g}</Text>
+                      <Text style={[colors.typography.bodyMedium, { color: colors.foreground, flex: 1, fontSize: 14 }]}>
+                        {typeof g === "string" ? g : JSON.stringify(g)}
+                      </Text>
                     </View>
                   ))}
                 </GlassCard>
 
                 {/* Workout Plan */}
                 <SectionHeader title="Weekly Workout Schedule" />
-                {geminiAnalysis.workoutPlan.weeklySchedule.map((day, i) => (
-                  <GlassCard key={i} style={[styles.dayCard, { marginBottom: 8 }]}>
-                    <View style={[styles.dayBadge, { backgroundColor: day.focus === "Rest" ? colors.muted : colors.primary + "18" }]}>
-                      <Text style={[colors.typography.label, { color: day.focus === "Rest" ? colors.mutedForeground : colors.primary, fontSize: 10 }]}>
-                        {day.day.slice(0, 3).toUpperCase()}
+                {geminiAnalysis.workoutPlan.weeklySchedule.map((dayObj, i) => {
+                  const day = typeof dayObj === 'string' 
+                    ? { day: dayObj.includes(":") ? dayObj.split(":")[0] : `Day ${i + 1}`, focus: dayObj.includes(":") ? dayObj.split(":")[1].trim() : dayObj, duration: "--", exercises: [] } 
+                    : dayObj;
+                  const dayName = (day.day || `Day ${i + 1}`).slice(0, 3).toUpperCase();
+                  return (
+                  <GlassCard key={i} style={{ ...styles.dayCard, marginBottom: 8 }}>
+                    <View style={[styles.dayBadge, { backgroundColor: day.focus?.includes("Rest") ? colors.muted : colors.primary + "18" }]}>
+                      <Text style={[colors.typography.label, { color: day.focus?.includes("Rest") ? colors.mutedForeground : colors.primary, fontSize: 10 }]}>
+                        {dayName}
                       </Text>
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>{day.focus}</Text>
-                      {day.exercises && day.exercises.length > 0 && (
+                      {Array.isArray(day.exercises) && day.exercises.length > 0 && (
                         <Text style={[colors.typography.caption, { color: colors.mutedForeground }]} numberOfLines={1}>
                           {day.exercises.join(" · ")}
                         </Text>
@@ -834,7 +867,7 @@ export default function InBodyScreen() {
                       </View>
                     )}
                   </GlassCard>
-                ))}
+                )})}
 
                 {/* Diet Plan */}
                 <SectionHeader title="Diet Plan" />
@@ -859,12 +892,18 @@ export default function InBodyScreen() {
                       {geminiAnalysis.dietPlan.waterLiters}L water daily
                     </Text>
                   </View>
-                  {geminiAnalysis.dietPlan.meals.map((meal, i) => (
+                  {geminiAnalysis.dietPlan.meals.map((meal, i) => {
+                    const mealText = typeof meal === "string" 
+                      ? meal 
+                      : (meal as any).name 
+                        ? `${(meal as any).name}: ${(meal as any).calories ?? ""} kcal` 
+                        : JSON.stringify(meal);
+                    return (
                     <View key={i} style={styles.mealPlanRow}>
                       <View style={[styles.mealDot, { backgroundColor: colors.primary }]} />
-                      <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1 }]}>{meal}</Text>
+                      <Text style={[colors.typography.caption, { color: colors.foreground, flex: 1 }]}>{mealText}</Text>
                     </View>
-                  ))}
+                  )})}
                 </GlassCard>
 
                 {/* Supplements */}
@@ -874,7 +913,9 @@ export default function InBodyScreen() {
                     {geminiAnalysis.dietPlan.supplements.map((s, i) => (
                       <View key={i} style={[styles.suppChip, { backgroundColor: colors.purple + "12" }]}>
                         <Ionicons name="flask" size={12} color={colors.purple} />
-                        <Text style={[colors.typography.caption, { color: colors.foreground, fontSize: 12 }]}>{s}</Text>
+                        <Text style={[colors.typography.caption, { color: colors.foreground, fontSize: 12 }]}>
+                          {typeof s === "string" ? s : JSON.stringify(s)}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -1061,6 +1102,8 @@ const styles = StyleSheet.create({
   summaryCard: { padding: 18, gap: 12, overflow: "hidden" },
   summaryHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   sparkleIcon: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  aiSourceRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, paddingHorizontal: 2 },
+  aiDebugBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   swRow: { flexDirection: "row", gap: 10 },
   swCard: { flex: 1, padding: 14, gap: 8 },
   swItem: { flexDirection: "row", alignItems: "flex-start", gap: 6 },

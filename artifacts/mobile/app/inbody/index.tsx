@@ -7,16 +7,21 @@ import { useColors } from "@/hooks/useColors";
 import {
   uploadInbodyReport,
   analyzeInbodyReport,
+  getInbodyReport,
   type UploadProgress,
+  type InBodyReport,
 } from "@/hooks/useInbodyService";
+import { useReports } from "@/hooks/useReports";
+import ReportCard from "./components/ReportCard";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -133,6 +138,10 @@ export default function InBodyScreen() {
   const [analyzeProgress, setAnalyzeProgress] = useState(0);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [currentReportId, setCurrentReportId] = useState<string | null>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+
+  const { reports, loading: reportsLoading, error: reportsError, refresh } = useReports(token);
 
   const pulseAnim = useSharedValue(1);
   const spinAnim = useSharedValue(0);
@@ -215,6 +224,7 @@ export default function InBodyScreen() {
 
       console.log("✅ Upload successful. Extracted metrics:", response.extractedMetrics);
       setMetrics(response.extractedMetrics as ExtractedMetrics);
+      setCurrentReportId(response.reportId);
 
       const uploadedAnalysis = parseGeminiAnalysis(response.geminiAnalysis);
       if (uploadedAnalysis) {
@@ -240,6 +250,7 @@ export default function InBodyScreen() {
 
       setPhase("results");
       setTimeout(() => setShowSmartPopup(true), 600);
+      refresh(); // Refresh reports list after successful upload
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
       console.error("❌ InBody analysis failed:", err.message);
@@ -255,6 +266,27 @@ export default function InBodyScreen() {
     setShowSmartPopup(false);
     setPhase("plan");
   };
+
+  const handleOpenReport = useCallback(async (report: InBodyReport) => {
+    if (!token) return;
+    setLoadingReport(true);
+    try {
+      const full = await getInbodyReport(report.id, token);
+      const m = full.extractedMetrics as ExtractedMetrics | undefined;
+      setMetrics(m ?? null);
+      const parsed = parseGeminiAnalysis(full.geminiAnalysis);
+      setGeminiAnalysis(parsed);
+      setCurrentReportId(full.id);
+      setSelectedFile(null);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setPhase("results");
+      setTimeout(() => setShowSmartPopup(true), 600);
+    } catch (err: any) {
+      Alert.alert("Error", err?.message ?? "Failed to load report. Please try again.");
+    } finally {
+      setLoadingReport(false);
+    }
+  }, [token]);
 
   // Use the actual InBody score from the report if available; otherwise estimate
   const bodyScore = metrics
@@ -324,6 +356,7 @@ export default function InBodyScreen() {
               setSelectedFile(null);
               setMetrics(null);
               setGeminiAnalysis(null);
+              setCurrentReportId(null);
             } else {
               router.back();
             }
@@ -417,6 +450,82 @@ export default function InBodyScreen() {
                 Try with demo report
               </Text>
             </TouchableOpacity>
+
+            {/* ── My Reports ─────────────────────────────────────────── */}
+            <View style={styles.myReportsHeader}>
+              <View style={styles.myReportsTitle}>
+                <Ionicons name="time-outline" size={18} color={colors.foreground} />
+                <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>
+                  My Reports
+                </Text>
+                {reports.length > 0 && (
+                  <View style={[styles.reportsCountBadge, { backgroundColor: colors.primary + "20" }]}>
+                    <Text style={[colors.typography.caption, { color: colors.primary }]}>
+                      {reports.length}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <TouchableOpacity
+                onPress={() => refresh()}
+                disabled={reportsLoading}
+                style={styles.refreshBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                {reportsLoading
+                  ? <ActivityIndicator size={14} color={colors.primary} />
+                  : <Ionicons name="refresh-outline" size={18} color={colors.mutedForeground} />
+                }
+              </TouchableOpacity>
+            </View>
+
+            {/* Loading report overlay */}
+            {loadingReport && (
+              <GlassCard style={styles.loadingReportCard}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[colors.typography.body, { color: colors.mutedForeground }]}>
+                  Loading report...
+                </Text>
+              </GlassCard>
+            )}
+
+            {/* Reports list */}
+            {reportsLoading && reports.length === 0 ? (
+              <View style={styles.reportsSkeletonWrap}>
+                {[0, 1, 2].map((i) => (
+                  <View
+                    key={i}
+                    style={[styles.reportsSkeleton, { backgroundColor: colors.card, opacity: 0.5 + i * 0.15 }]}
+                  />
+                ))}
+              </View>
+            ) : reportsError ? (
+              <GlassCard style={styles.reportsErrorCard}>
+                <Ionicons name="cloud-offline-outline" size={20} color={colors.mutedForeground} />
+                <Text style={[colors.typography.caption, { color: colors.mutedForeground, flex: 1 }]}>
+                  {reportsError}
+                </Text>
+                <TouchableOpacity onPress={() => refresh()}>
+                  <Text style={[colors.typography.caption, { color: colors.primary }]}>Retry</Text>
+                </TouchableOpacity>
+              </GlassCard>
+            ) : reports.length === 0 ? (
+              <GlassCard style={styles.reportsEmptyCard}>
+                <Ionicons name="document-text-outline" size={32} color={colors.mutedForeground} />
+                <Text style={[colors.typography.bodyMedium, { color: colors.foreground, textAlign: "center" }]}>
+                  No reports yet
+                </Text>
+                <Text style={[colors.typography.caption, { color: colors.mutedForeground, textAlign: "center" }]}>
+                  Upload your first InBody report above to get started.
+                </Text>
+              </GlassCard>
+            ) : (
+              <View style={styles.reportsList}>
+                {reports.map((r) => (
+                  <ReportCard key={r.id} report={r} onPress={handleOpenReport} />
+                ))}
+              </View>
+            )}
           </>
         )}
 
@@ -948,6 +1057,16 @@ const styles = StyleSheet.create({
   metricsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   metricChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
   demoBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderWidth: 1 },
+  myReportsHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 4 },
+  myReportsTitle: { flexDirection: "row", alignItems: "center", gap: 8 },
+  reportsCountBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  refreshBtn: { padding: 4 },
+  loadingReportCard: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14 },
+  reportsSkeletonWrap: { gap: 10 },
+  reportsSkeleton: { height: 80, borderRadius: 14 },
+  reportsErrorCard: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14 },
+  reportsEmptyCard: { alignItems: "center", padding: 28, gap: 10 },
+  reportsList: { gap: 10 },
   previewCard: { alignItems: "center", padding: 32, gap: 12 },
   previewIcon: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center" },
   analyzeBtn: {},

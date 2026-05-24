@@ -21,24 +21,31 @@ export interface AuthenticatedRequest extends Request {
 }
 
 // ─── JWT ─────────────────────────────────────────────────────────────────────
-const JWT_SECRET = process.env.JWT_SECRET;
+const _JWT_SECRET_RAW = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? "7d";
 
-if (!JWT_SECRET) {
+if (!_JWT_SECRET_RAW && process.env.NODE_ENV === "production") {
   throw new Error("JWT_SECRET must be set in your environment");
 }
 
-const jwtSecret: jwt.Secret = JWT_SECRET;
+// In development, fall back to a deterministic secret so the server can start
+// without manually setting JWT_SECRET. Change this before deploying to production.
+const jwtSecret: jwt.Secret =
+  _JWT_SECRET_RAW ?? "dev-only-insecure-jwt-secret-CHANGE-IN-PRODUCTION";
 
 // ─── Supabase ─────────────────────────────────────────────────────────────────
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? "";
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+if ((!SUPABASE_URL || !SUPABASE_ANON_KEY) && process.env.NODE_ENV === "production") {
   throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY must be set");
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Use placeholder URLs in dev if not configured — Supabase operations will
+// fail gracefully at runtime, but the server will start.
+export const supabase = SUPABASE_URL
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : createClient("https://placeholder.supabase.co", "placeholder-anon-key");
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 export function createJwtToken(user: User, onboardingCompleted: boolean) {

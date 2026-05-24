@@ -25,11 +25,16 @@ import {
 } from "./inbody-parser";
 
 // ─── Supabase Storage client ──────────────────────────────────────────────────
-const SUPABASE_URL = process.env.SUPABASE_URL!;
+const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SUPABASE_SERVICE_ROLE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY!;
+  process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
 
-const storageClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+// Graceful fallback — operations will fail at runtime with a clear error,
+// but the server won't crash on startup if credentials aren't configured.
+const storageClient = createClient(
+  SUPABASE_URL || "https://placeholder.supabase.co",
+  SUPABASE_SERVICE_ROLE_KEY || "placeholder-service-key",
+);
 
 const BUCKET = "inbody-reports";
 const STORAGE_SETUP_HINT =

@@ -67,7 +67,13 @@ export interface InBodyReport {
   fileType: string;
   fileName?: string;
   status: "pending" | "processing" | "done" | "failed";
-  extractedMetrics?: InBodyMetrics;
+  extractedMetrics?: InBodyMetrics & {
+    inbodyScore?: string;
+    height?: string;
+    age?: string;
+    gender?: string;
+  };
+  geminiAnalysis?: unknown;
   createdAt: string;
 }
 

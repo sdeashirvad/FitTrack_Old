@@ -251,6 +251,7 @@ export async function listInbodyReports(req: AuthenticatedRequest, res: Response
       fileName: inbodyReports.fileName,
       status: inbodyReports.status,
       extractedMetrics: inbodyReports.extractedMetrics,
+      geminiAnalysis: inbodyReports.geminiAnalysis,
       createdAt: inbodyReports.createdAt,
     })
     .from(inbodyReports)

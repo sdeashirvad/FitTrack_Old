@@ -224,3 +224,27 @@ export const insertUserAchievementSchema = createInsertSchema(userAchievements).
 export const insertUserStreakSchema = createInsertSchema(userStreaks).omit({ id: true, calculatedAt: true });
 export const insertAnalyticsSnapshotSchema = createInsertSchema(analyticsSnapshots).omit({ id: true, createdAt: true });
 export const insertGoalSchema = createInsertSchema(goals).omit({ id: true, createdAt: true, updatedAt: true });
+
+// ─── Daily Check-ins ──────────────────────────────────────────────────────────
+
+export const dailyCheckins = pgTable(
+  "daily_checkins",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    checkinDate: timestamp("checkin_date", { withTimezone: true }).notNull(),
+    energyLevel: integer("energy_level"),
+    sleepHours: numeric("sleep_hours"),
+    soreness: integer("soreness"),
+    mood: integer("mood"),
+    recoveryScore: integer("recovery_score"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userDateIndex: index("daily_checkins_user_date_idx").on(table.userId, table.checkinDate),
+  }),
+);
+
+export type DailyCheckin = InferModel<typeof dailyCheckins>;
+export const insertDailyCheckinSchema = createInsertSchema(dailyCheckins).omit({ id: true, createdAt: true });

@@ -111,7 +111,7 @@ export const gymTrainers = pgTable(
     gymId: uuid("gym_id").notNull().references(() => gyms.id, { onDelete: "cascade" }),
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     specialty: text("specialty"),
-    ratingAvg: numeric("rating_avg").default(0),
+    ratingAvg: numeric("rating_avg").default("0"),
     totalReviews: integer("total_reviews").default(0),
     status: trainerStatus("status").notNull().default("active"),
   },

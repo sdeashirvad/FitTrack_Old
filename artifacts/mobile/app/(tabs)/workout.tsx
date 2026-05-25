@@ -5,12 +5,15 @@ import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
+import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
   Image,
+  ImageBackground,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -20,6 +23,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { WebView } from "react-native-webview";
 import AIWorkoutOnboarding from "../workout/ai-onboarding";
 
 const { width } = Dimensions.get("window");
@@ -31,6 +35,19 @@ const TEXT = "#1A1A1E";
 const MUTED = "#9098A3";
 const DARK_CARD_FROM = "#1A1A2E";
 const DARK_CARD_TO = "#0D0D0D";
+const FEATURED_WORKOUT_IMAGE =
+  "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=1200&q=80";
+const WORKOUT_IMAGES = [
+  "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=400&q=80",
+  "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=400&q=80",
+  "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=400&q=80",
+  "https://images.unsplash.com/photo-1434682881908-b43d0467b798?auto=format&fit=crop&w=400&q=80",
+  "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=400&q=80",
+];
+const DEFAULT_EXERCISE_YOUTUBE: Record<string, string> = {
+  "dumbbell bicep curl": "https://www.youtube.com/watch?v=cBSD6mQIPQk",
+  "dumbbell standing reverse curl": "https://www.youtube.com/watch?v=cBSD6mQIPQk",
+};
 
 // ─── Category data ────────────────────────────────────────────────────────────
 
@@ -94,11 +111,73 @@ const FALLBACK_DAYS = [
 
 function planDayToDay(day: any) { return day; }
 
+function getWorkoutImage(index = 0) {
+  return WORKOUT_IMAGES[index % WORKOUT_IMAGES.length];
+}
+
+function getExerciseVideoUrl(exercise: any) {
+  const url =
+    exercise?.videoUrl ??
+    exercise?.tutorialVideoUrl ??
+    exercise?.tutorialUrl ??
+    exercise?.video_url ??
+    exercise?.tutorial_video_url;
+
+  return typeof url === "string" && /\.mp4($|\?)/i.test(url) ? url : null;
+}
+
+function getYoutubeEmbedUrl(exercise: any) {
+  const raw =
+    exercise?.youtubeUrl ??
+    exercise?.tutorialYoutubeUrl ??
+    exercise?.youtube_url ??
+    exercise?.tutorial_youtube_url ??
+    exercise?.youtubeId ??
+    exercise?.youtube_id ??
+    DEFAULT_EXERCISE_YOUTUBE[String(exercise?.name ?? "").trim().toLowerCase()];
+
+  if (typeof raw !== "string" || !raw.trim()) return null;
+
+  const value = raw.trim();
+  const idMatch =
+    value.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/) ??
+    value.match(/[?&]v=([A-Za-z0-9_-]{6,})/) ??
+    value.match(/embed\/([A-Za-z0-9_-]{6,})/) ??
+    value.match(/^([A-Za-z0-9_-]{6,})$/);
+
+  const videoId = idMatch?.[1];
+  if (!videoId) return null;
+
+  return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&playsinline=1&loop=1&playlist=${videoId}&start=0`;
+}
+
+function resolveApiHost() {
+  const hostUri =
+    typeof Constants.manifest?.debuggerHost === "string"
+      ? Constants.manifest.debuggerHost
+      : typeof Constants.expoConfig?.hostUri === "string"
+      ? Constants.expoConfig.hostUri
+      : null;
+
+  if (hostUri) {
+    const host = hostUri.includes("//")
+      ? hostUri.split("//")[1].split(":")[0]
+      : hostUri.split(":")[0];
+
+    if (Platform.OS === "android" && host === "localhost") {
+      return "10.0.2.2";
+    }
+
+    return host;
+  }
+
+  return Platform.OS === "android" ? "10.0.2.2" : "localhost";
+}
+
 function getApiBase() {
   const d = process.env.EXPO_PUBLIC_DOMAIN;
   if (d) return `https://${d}`;
-  if (Platform.OS === "android") return "http://10.0.2.2:3001";
-  return "http://localhost:3001";
+  return `http://${resolveApiHost()}:5000`;
 }
 
 const DIFF_COLOR: Record<string, string> = {
@@ -271,15 +350,17 @@ export default function WorkoutScreen() {
 
         {/* ── Featured Workout ── */}
         <Text style={[styles.sectionTitle, { marginTop: 6 }]}>Featured Workout</Text>
-        <View style={styles.featuredCard}>
+        <ImageBackground
+          source={{ uri: FEATURED_WORKOUT_IMAGE }}
+          imageStyle={styles.featuredImage}
+          style={styles.featuredCard}
+          resizeMode="cover"
+        >
           <LinearGradient
-            colors={[DARK_CARD_FROM, DARK_CARD_TO]}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            colors={["rgba(0,0,0,0.12)", "rgba(0,0,0,0.38)", "rgba(0,0,0,0.86)"]}
+            locations={[0, 0.45, 1]}
             style={StyleSheet.absoluteFillObject}
           />
-          {/* Decorative accent blobs */}
-          <View style={[styles.blob, { top: -30, right: -30, backgroundColor: ORANGE + "30" }]} />
-          <View style={[styles.blob, { bottom: -40, left: -20, backgroundColor: "#8B5CF640", width: 120, height: 120 }]} />
 
           <View style={styles.featuredTop}>
             <View style={styles.beginnerBadge}>
@@ -308,7 +389,7 @@ export default function WorkoutScreen() {
               <FeaturedStat icon="star" value={`+${activeDays.length}`} label="days" color="#8B5CF6" />
             </View>
           </View>
-        </View>
+        </ImageBackground>
 
         {/* ── My Plan ── */}
         <View style={styles.sectionRow}>
@@ -364,10 +445,7 @@ function ActiveWorkoutItem({ day, index, onPress }: any) {
       {/* Left accent stripe */}
       <View style={[styles.activeStripe, { backgroundColor: dayColor }]} />
 
-      {/* Icon */}
-      <View style={[styles.activeIconWrap, { backgroundColor: dayColor + "15" }]}>
-        <Ionicons name={day.isCardio ? "flame" : "barbell"} size={22} color={dayColor} />
-      </View>
+      <Image source={{ uri: getWorkoutImage(index) }} style={styles.activeImage} />
 
       {/* Content */}
       <View style={{ flex: 1 }}>
@@ -405,6 +483,7 @@ function ActiveWorkoutItem({ day, index, onPress }: any) {
 
 function PlaylistView({ day, topPad, insets, onBack, addWorkout }: any) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [tutorialExercise, setTutorialExercise] = useState<any | null>(null);
 
   const handleLogAll = () => {
     addWorkout({
@@ -416,6 +495,18 @@ function PlaylistView({ day, topPad, insets, onBack, addWorkout }: any) {
     });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert("✓ Logged!", `${day.focus} recorded in your history.`);
+  };
+
+  const handleLogExercise = (exercise: any) => {
+    addWorkout({
+      name: exercise.name,
+      date: new Date().toISOString().split("T")[0],
+      duration: Math.max(10, Math.round((exercise.sets ?? 3) * 6)),
+      exercises: [exercise],
+      calories: (exercise.estimatedCaloriesPerSet ?? 12) * (exercise.sets ?? 3),
+    });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert("Logged", `${exercise.name} recorded in your workout history.`);
   };
 
   return (
@@ -461,7 +552,10 @@ function PlaylistView({ day, topPad, insets, onBack, addWorkout }: any) {
               exercise={ex}
               partNumber={idx + 1}
               expanded={expandedId === ex.id}
-              onToggle={() => { Haptics.selectionAsync(); setExpandedId(expandedId === ex.id ? null : ex.id); }}
+              onToggle={() => {
+                Haptics.selectionAsync();
+                setTutorialExercise({ ...ex, partNumber: idx + 1 });
+              }}
             />
           ))}
 
@@ -474,6 +568,13 @@ function PlaylistView({ day, topPad, insets, onBack, addWorkout }: any) {
           )}
         </View>
       </ScrollView>
+
+      <ExerciseTutorialModal
+        exercise={tutorialExercise}
+        visible={!!tutorialExercise}
+        onClose={() => setTutorialExercise(null)}
+        onLog={() => tutorialExercise && handleLogExercise(tutorialExercise)}
+      />
     </View>
   );
 }
@@ -492,6 +593,7 @@ function StripStat({ icon, label, color = MUTED }: any) {
 function PlaylistItem({ exercise: ex, partNumber, expanded, onToggle }: any) {
   const diffColor = DIFF_COLOR[ex.difficulty] ?? MUTED;
   const totalCal = (ex.estimatedCaloriesPerSet ?? 12) * (ex.sets ?? 3);
+  const fallbackImage = getWorkoutImage(partNumber - 1);
 
   return (
     <TouchableOpacity onPress={onToggle} activeOpacity={0.85} style={styles.playlistItem}>
@@ -500,12 +602,7 @@ function PlaylistItem({ exercise: ex, partNumber, expanded, onToggle }: any) {
         {ex.gifUrl ? (
           <Image source={{ uri: ex.gifUrl }} style={styles.playlistImg} resizeMode="cover" />
         ) : (
-          <LinearGradient
-            colors={[ORANGE + "25", ORANGE + "08"]}
-            style={[styles.playlistImg, styles.playlistImgPlaceholder]}
-          >
-            <Ionicons name="barbell" size={22} color={ORANGE} />
-          </LinearGradient>
+          <Image source={{ uri: fallbackImage }} style={styles.playlistImg} resizeMode="cover" />
         )}
       </View>
 
@@ -591,26 +688,146 @@ function PlaylistStat({ label, value, color = MUTED }: any) {
   );
 }
 
+function ExerciseTutorialModal({ exercise, visible, onClose, onLog }: any) {
+  if (!exercise) return null;
+
+  const partNumber = exercise.partNumber ?? 1;
+  const youtubeEmbedUrl = getYoutubeEmbedUrl(exercise);
+  const videoUri = getExerciseVideoUrl(exercise);
+  const mediaUri = exercise.gifUrl || getWorkoutImage(partNumber - 1);
+  const totalCal = (exercise.estimatedCaloriesPerSet ?? 12) * (exercise.sets ?? 3);
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+      <View style={styles.tutorialRoot}>
+        <View style={styles.tutorialMedia}>
+          {youtubeEmbedUrl ? (
+            <TutorialYoutube embedUrl={youtubeEmbedUrl} />
+          ) : videoUri ? (
+            <TutorialVideo sourceUri={videoUri} />
+          ) : (
+            <Image source={{ uri: mediaUri }} style={styles.tutorialFallbackMedia} resizeMode="cover" />
+          )}
+          <LinearGradient
+            colors={["rgba(0,0,0,0.42)", "rgba(0,0,0,0.04)", "rgba(0,0,0,0.84)"]}
+            locations={[0, 0.45, 1]}
+            style={StyleSheet.absoluteFillObject}
+          />
+
+          <View style={styles.tutorialTopBar}>
+            <TouchableOpacity onPress={onClose} style={styles.tutorialCircleBtn}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.tutorialLivePill}>
+              <View style={styles.tutorialLiveDot} />
+              <Text style={styles.tutorialLiveText}>{youtubeEmbedUrl || videoUri ? "Video Tutorial" : "Tutorial"}</Text>
+            </View>
+          </View>
+
+          <View style={styles.tutorialSideActions}>
+            <TouchableOpacity style={styles.tutorialSideBtn} onPress={onLog}>
+              <Ionicons name="checkmark-circle" size={25} color="#fff" />
+              <Text style={styles.tutorialSideText}>Log</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.tutorialSideBtn}>
+              <Ionicons name="heart-outline" size={25} color="#fff" />
+              <Text style={styles.tutorialSideText}>Save</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.tutorialSideBtn}>
+              <Ionicons name="share-social-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.tutorialBottomPanel}>
+            <Text style={styles.tutorialPart}>Part {partNumber}</Text>
+            <Text style={styles.tutorialTitle}>{exercise.name}</Text>
+            <View style={styles.tutorialMetaRow}>
+              <View style={styles.tutorialMetaPill}>
+                <Ionicons name="repeat-outline" size={12} color="#fff" />
+                <Text style={styles.tutorialMetaText}>{exercise.sets ?? 3} sets</Text>
+              </View>
+              <View style={styles.tutorialMetaPill}>
+                <Ionicons name="timer-outline" size={12} color="#fff" />
+                <Text style={styles.tutorialMetaText}>{exercise.repsRange ?? "10-12"}</Text>
+              </View>
+              <View style={styles.tutorialMetaPill}>
+                <Ionicons name="flame" size={12} color={ORANGE} />
+                <Text style={styles.tutorialMetaText}>~{totalCal} kcal</Text>
+              </View>
+            </View>
+            <Text style={styles.tutorialHint} numberOfLines={3}>
+              {(exercise.instructions ?? [])[0] ??
+                `Focus on controlled reps for ${exercise.target || exercise.bodyPart || "the target muscle"}.`}
+            </Text>
+
+            <View style={styles.tutorialActions}>
+              <TouchableOpacity onPress={onLog} style={styles.tutorialPrimaryBtn}>
+                <Ionicons name="checkmark" size={18} color="#fff" />
+                <Text style={styles.tutorialPrimaryText}>Log Exercise</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onClose} style={styles.tutorialSecondaryBtn}>
+                <Ionicons name="stop-circle-outline" size={18} color="#fff" />
+                <Text style={styles.tutorialSecondaryText}>Stop Tutorial</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function TutorialVideo({ sourceUri }: { sourceUri: string }) {
+  const player = useVideoPlayer(sourceUri, (player) => {
+    player.loop = true;
+    player.muted = true;
+    player.play();
+  });
+
+  return (
+    <VideoView
+      player={player}
+      style={styles.tutorialVideo}
+      nativeControls={false}
+      contentFit="cover"
+    />
+  );
+}
+
+function TutorialYoutube({ embedUrl }: { embedUrl: string }) {
+  return (
+    <WebView
+      source={{ uri: embedUrl }}
+      style={styles.tutorialVideo}
+      allowsFullscreenVideo
+      mediaPlaybackRequiresUserAction={false}
+      javaScriptEnabled
+      domStorageEnabled
+      scrollEnabled={false}
+    />
+  );
+}
+
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
   loader: { flex: 1, alignItems: "center", justifyContent: "center" },
-  scroll: { paddingHorizontal: 20, gap: 14 },
+  scroll: { paddingHorizontal: 20, gap: 13 },
 
   // Header
-  header: { flexDirection: "row", alignItems: "center", gap: 10 },
+  header: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 2 },
   avatarWrap: {},
   avatar: { width: 40, height: 40, borderRadius: 20 },
   avatarFallback: { backgroundColor: ORANGE, alignItems: "center", justifyContent: "center" },
   avatarLetter: { color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" },
   headerTitle: { flex: 1, textAlign: "center", fontSize: 18, fontFamily: "Inter_700Bold", color: TEXT },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 6 },
-  iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: CARD, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: CARD, alignItems: "center", justifyContent: "center", shadowColor: "#111827", shadowOpacity: 0.07, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   notifDot: { position: "absolute", top: 8, right: 8, width: 7, height: 7, borderRadius: 4, backgroundColor: ORANGE, borderWidth: 1.5, borderColor: BG },
 
   // Search
-  searchWrap: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: CARD, borderRadius: 14, paddingHorizontal: 14, height: 48, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  searchWrap: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: CARD, borderRadius: 15, paddingHorizontal: 14, height: 48, shadowColor: "#111827", shadowOpacity: 0.05, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
   searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: TEXT },
 
   // Section row
@@ -620,19 +837,20 @@ const styles = StyleSheet.create({
 
   // Categories
   categoryList: { gap: 10, paddingBottom: 4, paddingRight: 20 },
-  categoryPill: { alignItems: "center", gap: 6, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 16, minWidth: 80, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 },
+  categoryPill: { alignItems: "center", gap: 6, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 15, minWidth: 80, shadowColor: "#111827", shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 1 },
   catIconWrap: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   catLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
 
   // Featured card
-  featuredCard: { height: 220, borderRadius: 24, overflow: "hidden", justifyContent: "space-between", padding: 18 },
+  featuredCard: { height: 220, borderRadius: 24, overflow: "hidden", justifyContent: "space-between", padding: 18, backgroundColor: DARK_CARD_TO },
+  featuredImage: { borderRadius: 24 },
   blob: { position: "absolute", width: 100, height: 100, borderRadius: 50 },
   featuredTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   beginnerBadge: { backgroundColor: "rgba(255,255,255,0.18)", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" },
   beginnerText: { color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.3 },
-  bookmarkBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
+  bookmarkBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(0,0,0,0.28)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)" },
   featuredBody: { gap: 8 },
-  featuredTitle: { color: "#fff", fontSize: 26, fontFamily: "Inter_700Bold", letterSpacing: -0.4, lineHeight: 32 },
+  featuredTitle: { color: "#fff", fontSize: 25, fontFamily: "Inter_700Bold", lineHeight: 31 },
   coachRow: { flexDirection: "row", alignItems: "center", gap: 7 },
   coachAvatarSmall: { width: 20, height: 20, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.25)", alignItems: "center", justifyContent: "center" },
   coachName: { color: "rgba(255,255,255,0.65)", fontSize: 12, fontFamily: "Inter_400Regular" },
@@ -642,38 +860,39 @@ const styles = StyleSheet.create({
   featStatLabel: { color: "rgba(255,255,255,0.5)", fontSize: 11, fontFamily: "Inter_400Regular" },
 
   // Active workout items
-  activeItem: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: CARD, borderRadius: 16, padding: 14, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, elevation: 1, overflow: "hidden" },
+  activeItem: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: CARD, borderRadius: 17, padding: 12, shadowColor: "#111827", shadowOpacity: 0.045, shadowRadius: 12, shadowOffset: { width: 0, height: 7 }, elevation: 1, overflow: "hidden" },
   activeStripe: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3, borderTopLeftRadius: 16, borderBottomLeftRadius: 16 },
   activeIconWrap: { width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center" },
+  activeImage: { width: 52, height: 52, borderRadius: 16, backgroundColor: "#F3F4F6" },
   activeName: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: TEXT },
   activeMetaRow: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 4 },
   activePill: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#F3F4F6", paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   activePillText: { fontSize: 10, fontFamily: "Inter_400Regular", color: MUTED },
-  activeProgressBar: { height: 3, borderRadius: 2, backgroundColor: "#F0F0F5", marginTop: 8, overflow: "hidden" },
+  activeProgressBar: { height: 3, borderRadius: 2, backgroundColor: "#ECEEF3", marginTop: 8, overflow: "hidden" },
   activeProgressFill: { height: 3, borderRadius: 2 },
 
   emptyCard: { backgroundColor: CARD, borderRadius: 16, padding: 32, alignItems: "center", gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", color: MUTED, textAlign: "center" },
 
   // Playlist view
-  playlistHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingHorizontal: 20, paddingBottom: 16 },
+  playlistHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingHorizontal: 20, paddingBottom: 18 },
   backBtn: { paddingTop: 2 },
   playlistTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: TEXT, lineHeight: 30 },
   playlistSub: { fontSize: 13, fontFamily: "Inter_400Regular", color: MUTED, marginTop: 3, lineHeight: 20 },
   logAllBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, marginTop: 2 },
   logAllText: { color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" },
 
-  statsStrip: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", borderTopWidth: 1, borderBottomWidth: 1, paddingVertical: 12, marginHorizontal: 20, marginBottom: 8 },
+  statsStrip: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", borderTopWidth: 1, borderBottomWidth: 1, paddingVertical: 12, marginHorizontal: 20, marginBottom: 12 },
   stripStat: { flexDirection: "row", alignItems: "center", gap: 5 },
   stripStatText: { fontSize: 13, fontFamily: "Inter_500Medium", color: MUTED },
   stripDivider: { width: 1, height: 16, backgroundColor: "#E8E8EE" },
 
-  playlistList: { paddingHorizontal: 20, gap: 0 },
+  playlistList: { paddingHorizontal: 20, gap: 12 },
 
   // Playlist item
-  playlistItem: { paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: "#F0F0F5", flexDirection: "row", flexWrap: "wrap", gap: 12, alignItems: "flex-start" },
+  playlistItem: { padding: 12, borderRadius: 18, backgroundColor: CARD, flexDirection: "row", flexWrap: "wrap", gap: 12, alignItems: "center", shadowColor: "#111827", shadowOpacity: 0.045, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 1 },
   playlistImgWrap: {},
-  playlistImg: { width: 72, height: 72, borderRadius: 14 },
+  playlistImg: { width: 72, height: 72, borderRadius: 16, backgroundColor: "#F3F4F6" },
   playlistImgPlaceholder: { alignItems: "center", justifyContent: "center" },
   playlistContent: { flex: 1, gap: 4 },
   partLabel: { fontSize: 11, fontFamily: "Inter_700Bold", color: ORANGE, letterSpacing: 0.3, textTransform: "uppercase" },
@@ -684,7 +903,7 @@ const styles = StyleSheet.create({
   playlistTags: { flexDirection: "row", flexWrap: "wrap", gap: 5 },
   playlistTag: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   playlistTagText: { fontSize: 10, fontFamily: "Inter_500Medium", color: MUTED },
-  playlistChevron: { paddingTop: 26 },
+  playlistChevron: { alignSelf: "center" },
 
   // Expanded section within playlist item
   playlistExpanded: { width: "100%", gap: 12, paddingTop: 4 },
@@ -706,4 +925,31 @@ const styles = StyleSheet.create({
   cardioCard: { alignItems: "center", gap: 10, padding: 32 },
   cardioTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: TEXT },
   cardioSub: { fontSize: 14, fontFamily: "Inter_400Regular", color: MUTED, textAlign: "center", lineHeight: 22 },
+
+  // Tutorial overlay
+  tutorialRoot: { flex: 1, backgroundColor: "#05070A" },
+  tutorialMedia: { flex: 1, justifyContent: "space-between", overflow: "hidden" },
+  tutorialVideo: { ...StyleSheet.absoluteFillObject },
+  tutorialFallbackMedia: { ...StyleSheet.absoluteFillObject, opacity: 0.96 },
+  tutorialImage: { opacity: 0.96 },
+  tutorialTopBar: { paddingTop: 54, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  tutorialCircleBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: "rgba(0,0,0,0.34)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)" },
+  tutorialLivePill: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "rgba(0,0,0,0.38)", borderRadius: 999, paddingHorizontal: 13, paddingVertical: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)" },
+  tutorialLiveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: ORANGE },
+  tutorialLiveText: { color: "#fff", fontSize: 12, fontFamily: "Inter_700Bold" },
+  tutorialSideActions: { position: "absolute", right: 18, top: "38%", gap: 22, alignItems: "center" },
+  tutorialSideBtn: { alignItems: "center", gap: 5 },
+  tutorialSideText: { color: "#fff", fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  tutorialBottomPanel: { paddingHorizontal: 20, paddingBottom: 34, gap: 10 },
+  tutorialPart: { color: ORANGE, fontSize: 12, fontFamily: "Inter_700Bold", textTransform: "uppercase" },
+  tutorialTitle: { color: "#fff", fontSize: 28, lineHeight: 34, fontFamily: "Inter_700Bold" },
+  tutorialMetaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  tutorialMetaPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.14)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  tutorialMetaText: { color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  tutorialHint: { color: "rgba(255,255,255,0.78)", fontSize: 14, lineHeight: 20, fontFamily: "Inter_400Regular", maxWidth: width - 86 },
+  tutorialActions: { flexDirection: "row", gap: 10, marginTop: 6 },
+  tutorialPrimaryBtn: { flex: 1.2, height: 50, borderRadius: 15, backgroundColor: ORANGE, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 7 },
+  tutorialPrimaryText: { color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" },
+  tutorialSecondaryBtn: { flex: 1, height: 50, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.16)", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 7, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
+  tutorialSecondaryText: { color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" },
 });

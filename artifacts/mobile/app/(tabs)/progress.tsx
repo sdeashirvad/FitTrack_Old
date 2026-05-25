@@ -32,19 +32,12 @@ const { width: SCREEN_W } = Dimensions.get("window");
 const CHART_W = SCREEN_W - 64;
 const CHART_H = 140;
 
-// Fallback demo data for when API has no data yet
-const DEMO_WEIGHT = [83.0, 82.5, 81.8, 81.2, 80.5, 79.8, 79.2, 78.2];
-const DEMO_FAT    = [22.3, 22.0, 21.5, 21.0, 20.5, 19.8, 19.0, 18.4];
-const DEMO_MUSCLE = [30.2, 30.4, 30.7, 31.0, 31.2, 31.6, 32.1, 32.8];
-const DEMO_CAL    = [1650, 1820, 1700, 2100, 1950, 2250, 1880, 2180];
-const DEMO_WEEKS  = ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8"];
-
 const ACHIEVEMENT_TYPE_ICON: Record<string, { icon: string; color: string }> = {
-  workout_streak: { icon: "flame",        color: "#FF6B35" },
+  workout_streak:     { icon: "flame",        color: "#FF6B35" },
   progress_milestone: { icon: "trending-down", color: "#22C55E" },
-  workout_count:  { icon: "barbell",      color: "#3B82F6" },
-  nutrition:      { icon: "nutrition",    color: "#F59E0B" },
-  default:        { icon: "trophy",       color: "#8B5CF6" },
+  workout_count:      { icon: "barbell",      color: "#3B82F6" },
+  nutrition:          { icon: "nutrition",    color: "#F59E0B" },
+  default:            { icon: "trophy",       color: "#8B5CF6" },
 };
 
 const ENERGY_LABELS = ["Very Low 😞", "Low 😔", "Moderate 😐", "High 😊", "Excellent 🔥"];
@@ -52,7 +45,7 @@ const ENERGY_LABELS = ["Very Low 😞", "Low 😔", "Moderate 😐", "High 😊"
 type Mode   = "weight" | "fat" | "muscle" | "calories";
 type Period = "1d" | "1w" | "1m" | "All";
 
-// ─── AreaChart (unchanged) ────────────────────────────────────────────────────
+// ─── AreaChart ────────────────────────────────────────────────────────────────
 
 function AreaChart({ data, color, width, height }: { data: number[]; color: string; width: number; height: number }) {
   if (!data || data.length < 2) return null;
@@ -93,6 +86,34 @@ function AnimatedBar({ targetH, color, delay }: { targetH: number; color: string
   return <Animated.View style={[{ width: "100%", borderRadius: 6, minHeight: 4 }, style, { backgroundColor: color }]} />;
 }
 
+// ─── Empty State Card ─────────────────────────────────────────────────────────
+
+function EmptyCard({
+  icon, title, subtitle, ctaLabel, ctaIcon, onCta, colors,
+}: {
+  icon: string; title: string; subtitle: string;
+  ctaLabel?: string; ctaIcon?: string; onCta?: () => void; colors: any;
+}) {
+  return (
+    <View style={[emptyStyles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[emptyStyles.iconWrap, { backgroundColor: colors.primary + "12" }]}>
+        <Ionicons name={icon as any} size={26} color={colors.primary} />
+      </View>
+      <Text style={[emptyStyles.title, { color: colors.foreground }]}>{title}</Text>
+      <Text style={[emptyStyles.subtitle, { color: colors.mutedForeground }]}>{subtitle}</Text>
+      {ctaLabel && onCta && (
+        <TouchableOpacity
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onCta(); }}
+          style={[emptyStyles.cta, { backgroundColor: colors.primary }]}
+        >
+          {ctaIcon && <Ionicons name={ctaIcon as any} size={14} color="#fff" />}
+          <Text style={emptyStyles.ctaText}>{ctaLabel}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
 // ─── Fitness Score Card ───────────────────────────────────────────────────────
 
 function FitnessScoreCard({ score, label, breakdown, colors }: any) {
@@ -110,7 +131,6 @@ function FitnessScoreCard({ score, label, breakdown, colors }: any) {
         style={StyleSheet.absoluteFillObject}
       />
       <View style={styles.scoreCardInner}>
-        {/* Ring */}
         <View style={styles.scoreRingWrap}>
           <Svg width={128} height={128} viewBox="0 0 128 128">
             <Circle cx={cx} cy={cy} r={r} stroke={colors.border} strokeWidth={stroke} fill="none" />
@@ -127,7 +147,6 @@ function FitnessScoreCard({ score, label, breakdown, colors }: any) {
             <Text style={[styles.scoreMax, { color: colors.mutedForeground }]}>/100</Text>
           </View>
         </View>
-        {/* Info */}
         <View style={styles.scoreInfo}>
           <Text style={[styles.scoreLabel, { color: colors.mutedForeground }]}>AI FITNESS SCORE</Text>
           <Text style={[styles.scoreLabel2, { color: colors.foreground }]}>{label}</Text>
@@ -186,7 +205,6 @@ function CheckinModal({
             </TouchableOpacity>
           </View>
 
-          {/* Energy */}
           <Text style={[styles.modalQuestion, { color: colors.foreground }]}>⚡ How energetic do you feel?</Text>
           <View style={styles.levelRow}>
             {[1,2,3,4,5].map(v => (
@@ -201,7 +219,6 @@ function CheckinModal({
           </View>
           <Text style={[styles.levelCaption, { color: colors.primary }]}>{ENERGY_LABELS[energy - 1]}</Text>
 
-          {/* Sleep */}
           <Text style={[styles.modalQuestion, { color: colors.foreground }]}>😴 Hours of sleep last night?</Text>
           <View style={styles.levelRow}>
             {[5,6,7,8,9].map(v => (
@@ -215,7 +232,6 @@ function CheckinModal({
             ))}
           </View>
 
-          {/* Recovery */}
           <Text style={[styles.modalQuestion, { color: colors.foreground }]}>💪 Recovery level?</Text>
           <View style={styles.levelRow}>
             {[1,2,3,4,5].map(v => (
@@ -259,43 +275,40 @@ export default function ProgressScreen() {
   const [checkinVisible, setCheckinVisible] = useState(false);
   const [insightsExpanded, setInsightsExpanded] = useState(false);
 
-  // Derive chart data from hook (fallback to demo)
-  const WEIGHT_DATA = dashboard.weightTrend.length >= 2 ? dashboard.weightTrend.map(x => x.value) : DEMO_WEIGHT;
-  const WEEKS       = dashboard.weightTrend.length >= 2 ? dashboard.weightTrend.map(x => x.week)  : DEMO_WEEKS;
+  // ── Determine which data sections have real data ──────────────────────────
+  const hasWeightData    = dashboard.weightTrend.length >= 2;
+  const hasInbodyData    = dashboard.inbodyReports.length >= 1;
+  const hasAchievements  = dashboard.achievements.length > 0;
+  const hasInsights      = aiInsights.insights.length > 0;
+  const hasAnyData       = hasWeightData || hasInbodyData || dashboard.workoutStats.streak > 0;
 
-  // Fat / muscle from inbody reports
+  // ── Chart data (only real data, no demo fallback) ─────────────────────────
+  const WEIGHT_DATA = hasWeightData ? dashboard.weightTrend.map(x => x.value) : [];
+  const WEEKS       = hasWeightData ? dashboard.weightTrend.map(x => x.week) : [];
+
   const inbodyFat    = dashboard.inbodyReports.filter(r => r.bodyFat).map(r => parseFloat(r.bodyFat!)).reverse();
   const inbodyMuscle = dashboard.inbodyReports.filter(r => r.muscleMass).map(r => parseFloat(r.muscleMass!)).reverse();
-  const FAT_DATA    = inbodyFat.length >= 2 ? inbodyFat : DEMO_FAT;
-  const MUSCLE_DATA = inbodyMuscle.length >= 2 ? inbodyMuscle : DEMO_MUSCLE;
-  const CAL_DATA    = DEMO_CAL; // calories from meal logs — future feature
+  const FAT_DATA    = inbodyFat.length >= 2 ? inbodyFat : [];
+  const MUSCLE_DATA = inbodyMuscle.length >= 2 ? inbodyMuscle : [];
+  const CAL_DATA: number[] = [];
 
-  // Transformation summary
+  // ── Transformation summary ────────────────────────────────────────────────
   const ts = dashboard.transformationSummary;
-  const totalLost   = ts.weightLost  != null ? ts.weightLost.toFixed(1)  : (WEIGHT_DATA[0] - WEIGHT_DATA[WEIGHT_DATA.length-1]).toFixed(1);
-  const muscleDiff  = ts.muscleGained != null ? ts.muscleGained.toFixed(1) : (MUSCLE_DATA[MUSCLE_DATA.length-1] - MUSCLE_DATA[0]).toFixed(1);
-  const fatDiff     = ts.fatLost     != null ? ts.fatLost.toFixed(1)     : (FAT_DATA[0] - FAT_DATA[FAT_DATA.length-1]).toFixed(1);
-  const totalWeeks  = ts.weeks  > 0 ? ts.weeks  : 8;
-  const totalWorkouts = (recentWorkouts.length + 47);
 
-  // Achievements mapped to icon/color
+  // ── Achievements ──────────────────────────────────────────────────────────
   const achieveBadges = dashboard.achievements.map(a => {
     const typeMap = ACHIEVEMENT_TYPE_ICON[a.type ?? "default"] ?? ACHIEVEMENT_TYPE_ICON.default;
     return { ...a, icon: typeMap.icon as any, color: typeMap.color, unlocked: true };
   });
+
   const LOCKED_BADGES = [
     { icon: "star" as const, label: "Top Form", color: "#8B5CF6", unlocked: false },
     { icon: "medal" as const, label: "10 kg Lost", color: "#EF4444", unlocked: false },
   ];
-  const allBadges = achieveBadges.length > 0
+
+  const allBadges = hasAchievements
     ? [...achieveBadges, ...LOCKED_BADGES].slice(0, 6)
-    : [
-      { icon: "flame" as const, label: "12 Day Streak", color: "#FF6B35", unlocked: true },
-      { icon: "barbell" as const, label: "50 Workouts", color: "#3B82F6", unlocked: true },
-      { icon: "trending-down" as const, label: "5 kg Lost", color: "#22C55E", unlocked: true },
-      { icon: "trophy" as const, label: "Consistency", color: "#F59E0B", unlocked: true },
-      ...LOCKED_BADGES,
-    ];
+    : [];
 
   const modeMap: Record<Mode, { data: number[]; color: string; label: string; unit: string }> = {
     weight:   { data: WEIGHT_DATA, color: colors.primary, label: "Weight",    unit: "kg"   },
@@ -305,12 +318,12 @@ export default function ProgressScreen() {
   };
 
   const active       = modeMap[chartMode];
-  const latestVal    = active.data[active.data.length - 1] ?? 0;
-  const prevVal      = active.data[0] ?? 0;
-  const diff         = latestVal - prevVal;
-  const diffStr      = `${diff >= 0 ? "+" : ""}${diff.toFixed(chartMode === "calories" ? 0 : 1)} ${active.unit}`;
-  const isGoodChange = chartMode === "weight" ? diff < 0 : chartMode === "fat" ? diff < 0 : diff > 0;
-  const chartWeeks   = active.data.map((_, i) => `W${i+1}`);
+  const latestVal    = active.data.length ? active.data[active.data.length - 1] : null;
+  const prevVal      = active.data.length ? active.data[0] : null;
+  const diff         = latestVal != null && prevVal != null ? latestVal - prevVal : null;
+  const diffStr      = diff != null ? `${diff >= 0 ? "+" : ""}${diff.toFixed(chartMode === "calories" ? 0 : 1)} ${active.unit}` : null;
+  const isGoodChange = diff != null && (chartMode === "weight" ? diff < 0 : chartMode === "fat" ? diff < 0 : diff > 0);
+  const chartWeeks   = WEEKS.length ? WEEKS : active.data.map((_, i) => `W${i+1}`);
 
   const currentBmi    = dashboard.currentMetrics.bmi ?? bmi;
   const currentStreak = dashboard.workoutStats.streak;
@@ -327,6 +340,9 @@ export default function ProgressScreen() {
     await fetchAIInsights();
   };
 
+  // ── Chart has data for current mode ──────────────────────────────────────
+  const chartHasData = active.data.length >= 2;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -341,12 +357,47 @@ export default function ProgressScreen() {
           </View>
           <View style={styles.headerRight}>
             {loading && <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />}
-            <View style={[styles.streakBadge, { backgroundColor: colors.primary + "15" }]}>
-              <Ionicons name="flame" size={15} color={colors.primary} />
-              <Text style={[styles.streakText, { color: colors.primary }]}>{currentStreak}d streak</Text>
-            </View>
+            {currentStreak > 0 && (
+              <View style={[styles.streakBadge, { backgroundColor: colors.primary + "15" }]}>
+                <Ionicons name="flame" size={15} color={colors.primary} />
+                <Text style={[styles.streakText, { color: colors.primary }]}>{currentStreak}d streak</Text>
+              </View>
+            )}
           </View>
         </View>
+
+        {/* ── Onboarding banner when no data at all ── */}
+        {!loading && !hasAnyData && (
+          <View style={[styles.onboardCard, { backgroundColor: colors.card, borderColor: colors.primary + "30" }]}>
+            <LinearGradient
+              colors={[colors.primary + "08", colors.purple + "05"]}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <View style={[styles.onboardIconWrap, { backgroundColor: colors.primary + "15" }]}>
+              <Ionicons name="analytics-outline" size={28} color={colors.primary} />
+            </View>
+            <Text style={[styles.onboardTitle, { color: colors.foreground }]}>No progress data yet.</Text>
+            <Text style={[styles.onboardSub, { color: colors.mutedForeground }]}>
+              Start tracking to unlock your personalised AI fitness dashboard.
+            </Text>
+            <View style={styles.onboardCtas}>
+              <TouchableOpacity
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/inbody"); }}
+                style={[styles.onboardBtn, { backgroundColor: colors.primary }]}
+              >
+                <Ionicons name="scan-outline" size={14} color="#fff" />
+                <Text style={styles.onboardBtnText}>Upload Report</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCheckinVisible(true); }}
+                style={[styles.onboardBtn, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.primary }]}
+              >
+                <Ionicons name="pulse-outline" size={14} color={colors.primary} />
+                <Text style={[styles.onboardBtnText, { color: colors.primary }]}>Log Check-in</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* ── Fitness Score Card ── */}
         <FitnessScoreCard
@@ -380,31 +431,57 @@ export default function ProgressScreen() {
           <Ionicons name={hasCheckedIn ? "eye-outline" : "chevron-forward"} size={16} color={colors.mutedForeground} />
         </TouchableOpacity>
 
-        {/* ── Transformation Summary ── */}
-        <View style={[styles.transformCard, { backgroundColor: colors.card, ...colors.shadow.medium }]}>
-          <Text style={[styles.transformLabel, { color: colors.mutedForeground }]}>{totalWeeks}-WEEK TRANSFORMATION</Text>
-          <View style={styles.transformStats}>
-            <TransformStat value={totalLost} unit="kg" label="Lost" color={colors.primary} />
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <TransformStat value={muscleDiff} unit="kg" label="Muscle" color={colors.green} />
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <TransformStat value={fatDiff} unit="%" label="Fat ↓" color={colors.purple} />
+        {/* ── Transformation Summary (only if has inbody data) ── */}
+        {hasInbodyData ? (
+          <View style={[styles.transformCard, { backgroundColor: colors.card, ...colors.shadow.medium }]}>
+            <Text style={[styles.transformLabel, { color: colors.mutedForeground }]}>
+              {(ts.weeks > 0 ? ts.weeks : 1)}-WEEK TRANSFORMATION
+            </Text>
+            <View style={styles.transformStats}>
+              <TransformStat
+                value={ts.weightLost != null ? ts.weightLost.toFixed(1) : "—"}
+                unit={ts.weightLost != null ? "kg" : ""}
+                label="Lost"
+                color={colors.primary}
+              />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <TransformStat
+                value={ts.muscleGained != null ? ts.muscleGained.toFixed(1) : "—"}
+                unit={ts.muscleGained != null ? "kg" : ""}
+                label="Muscle"
+                color={colors.green}
+              />
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <TransformStat
+                value={ts.fatLost != null ? ts.fatLost.toFixed(1) : "—"}
+                unit={ts.fatLost != null ? "%" : ""}
+                label="Fat ↓"
+                color={colors.purple}
+              />
+            </View>
+            <Text style={[styles.progressLabel, { color: colors.mutedForeground }]}>
+              {ts.scans > 0 ? `${ts.scans} InBody scan${ts.scans > 1 ? "s" : ""} recorded · Keep going!` : "Upload more scans to track transformation"}
+            </Text>
           </View>
-          <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
-            <View style={[styles.progressFill, { backgroundColor: colors.green, width: "74%" }]} />
-          </View>
-          <Text style={[styles.progressLabel, { color: colors.mutedForeground }]}>
-            {ts.scans > 0 ? `${ts.scans} InBody scans recorded · Keep going!` : "74% to goal · Keep going!"}
-          </Text>
-        </View>
+        ) : (
+          <EmptyCard
+            icon="body-outline"
+            title="No transformation data yet."
+            subtitle="Upload your first InBody report to see body composition insights and track your transformation over time."
+            ctaLabel="Upload Report"
+            ctaIcon="scan-outline"
+            onCta={() => router.push("/inbody")}
+            colors={colors}
+          />
+        )}
 
         {/* ── Stats grid ── */}
         <View style={styles.statsGrid}>
           {[
-            { label: "Total Workouts", value: totalWorkouts.toString(),           icon: "barbell"  as const, color: colors.primary },
-            { label: "Streak",         value: `${currentStreak}d`,               icon: "flame"    as const, color: "#F59E0B"      },
-            { label: "Calories Burned",value: `${todayLog.steps > 0 ? Math.round(todayLog.steps * 0.04) : 540}`, icon: "flame" as const, color: colors.red },
-            { label: "Current BMI",    value: `${currentBmi}`,                   icon: "body"     as const, color: colors.purple  },
+            { label: "Workout Streak",  value: currentStreak > 0 ? `${currentStreak}d` : "—",                    icon: "flame"  as const, color: "#F59E0B" },
+            { label: "Current BMI",     value: currentBmi ? `${currentBmi}` : "—",                               icon: "body"   as const, color: colors.purple },
+            { label: "InBody Scans",    value: dashboard.inbodyReports.length > 0 ? `${dashboard.inbodyReports.length}` : "—", icon: "scan-outline" as const, color: colors.primary },
+            { label: "Check-ins",       value: hasCheckedIn ? "Today ✓" : "—",                                    icon: "pulse-outline" as const, color: colors.green },
           ].map((s) => (
             <View key={s.label} style={[styles.statCard, { backgroundColor: colors.card, ...colors.shadow.soft }]}>
               <View style={[styles.statIcon, { backgroundColor: s.color + "15" }]}>
@@ -420,19 +497,29 @@ export default function ProgressScreen() {
         <View style={[styles.chartCard, { backgroundColor: colors.card, ...colors.shadow.soft }]}>
           <View style={styles.chartTop}>
             <View>
-              <Text style={[styles.chartCurrVal, { color: active.color }]}>
-                {latestVal.toFixed(chartMode === "calories" ? 0 : 1)} {active.unit}
-              </Text>
-              <View style={styles.chartDiffRow}>
-                <Ionicons
-                  name={isGoodChange ? "arrow-down" : "arrow-up"}
-                  size={12}
-                  color={isGoodChange ? colors.green : colors.red}
-                />
-                <Text style={[styles.chartDiff, { color: isGoodChange ? colors.green : colors.red }]}>
-                  {diffStr} from W1
+              {latestVal != null && chartHasData ? (
+                <>
+                  <Text style={[styles.chartCurrVal, { color: active.color }]}>
+                    {latestVal.toFixed(chartMode === "calories" ? 0 : 1)} {active.unit}
+                  </Text>
+                  {diffStr && (
+                    <View style={styles.chartDiffRow}>
+                      <Ionicons
+                        name={isGoodChange ? "arrow-down" : "arrow-up"}
+                        size={12}
+                        color={isGoodChange ? colors.green : colors.red}
+                      />
+                      <Text style={[styles.chartDiff, { color: isGoodChange ? colors.green : colors.red }]}>
+                        {diffStr} from W1
+                      </Text>
+                    </View>
+                  )}
+                </>
+              ) : (
+                <Text style={[styles.chartCurrVal, { color: colors.mutedForeground, fontSize: 16 }]}>
+                  No {active.label} data
                 </Text>
-              </View>
+              )}
             </View>
             <View style={styles.periodRow}>
               {(["1d", "1w", "1m", "All"] as Period[]).map((p) => (
@@ -461,13 +548,35 @@ export default function ProgressScreen() {
             ))}
           </View>
 
-          <AreaChart data={active.data} color={active.color} width={CHART_W} height={CHART_H} />
-
-          <View style={styles.xLabels}>
-            {chartWeeks.map((w, i) => (
-              <Text key={i} style={[styles.xLabel, { color: i === chartWeeks.length - 1 ? active.color : colors.mutedForeground }]}>{w}</Text>
-            ))}
-          </View>
+          {chartHasData ? (
+            <>
+              <AreaChart data={active.data} color={active.color} width={CHART_W} height={CHART_H} />
+              <View style={styles.xLabels}>
+                {chartWeeks.map((w, i) => (
+                  <Text key={i} style={[styles.xLabel, { color: i === chartWeeks.length - 1 ? active.color : colors.mutedForeground }]}>{w}</Text>
+                ))}
+              </View>
+            </>
+          ) : (
+            <View style={[styles.chartEmpty, { borderColor: colors.border }]}>
+              <Ionicons name="stats-chart-outline" size={32} color={colors.mutedForeground} />
+              <Text style={[styles.chartEmptyText, { color: colors.mutedForeground }]}>
+                {chartMode === "weight"
+                  ? "Log your weight to see trends here."
+                  : chartMode === "fat" || chartMode === "muscle"
+                  ? "Upload InBody reports to unlock body composition charts."
+                  : "Nutrition tracking coming soon."}
+              </Text>
+              {(chartMode === "fat" || chartMode === "muscle") && (
+                <TouchableOpacity
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/inbody"); }}
+                  style={[styles.chartEmptyBtn, { backgroundColor: colors.primary + "15" }]}
+                >
+                  <Text style={[styles.chartEmptyBtnText, { color: colors.primary }]}>Upload Report</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
 
         {/* ── AI Insights ── */}
@@ -484,7 +593,7 @@ export default function ProgressScreen() {
             <View style={{ flex: 1 }} />
             {insightsLoading
               ? <ActivityIndicator size="small" color={colors.primary} />
-              : !insightsExpanded
+              : insightsExpanded && hasInsights
                 ? (
                   <TouchableOpacity
                     onPress={handleLoadInsights}
@@ -493,41 +602,75 @@ export default function ProgressScreen() {
                     <Ionicons name="refresh" size={14} color={colors.primary} />
                     <Text style={[styles.refreshText, { color: colors.primary }]}>Refresh</Text>
                   </TouchableOpacity>
-                ) : null
+                )
+                : !insightsExpanded
+                  ? (
+                    <TouchableOpacity
+                      onPress={handleLoadInsights}
+                      style={[styles.refreshBtn, { backgroundColor: colors.primary + "15" }]}
+                    >
+                      <Ionicons name="sparkles" size={14} color={colors.primary} />
+                      <Text style={[styles.refreshText, { color: colors.primary }]}>Generate</Text>
+                    </TouchableOpacity>
+                  ) : null
             }
           </View>
-          {aiInsights.insights.map((insight, i) => (
-            <View key={i} style={styles.insightRow}>
-              <View style={[styles.insightDot, { backgroundColor: colors.primary }]} />
-              <Text style={[styles.insightText, { color: colors.foreground }]}>{insight}</Text>
+
+          {insightsExpanded && hasInsights ? (
+            <>
+              {aiInsights.insights.map((insight, i) => (
+                <View key={i} style={styles.insightRow}>
+                  <View style={[styles.insightDot, { backgroundColor: colors.primary }]} />
+                  <Text style={[styles.insightText, { color: colors.foreground }]}>{insight}</Text>
+                </View>
+              ))}
+              {aiInsights.weeklyGoal && (
+                <View style={[styles.weeklyGoalPill, { backgroundColor: colors.primary + "12", borderColor: colors.primary + "30" }]}>
+                  <Ionicons name="flag-outline" size={12} color={colors.primary} />
+                  <Text style={[styles.weeklyGoalText, { color: colors.primary }]}>{aiInsights.weeklyGoal}</Text>
+                </View>
+              )}
+            </>
+          ) : insightsExpanded && !hasInsights ? (
+            <View style={styles.insightRow}>
+              <Text style={[styles.insightText, { color: colors.mutedForeground }]}>
+                Log workouts, check-ins, and weight to unlock AI-powered insights.
+              </Text>
             </View>
-          ))}
-          {aiInsights.weeklyGoal && (
-            <View style={[styles.weeklyGoalPill, { backgroundColor: colors.primary + "12", borderColor: colors.primary + "30" }]}>
-              <Ionicons name="flag-outline" size={12} color={colors.primary} />
-              <Text style={[styles.weeklyGoalText, { color: colors.primary }]}>{aiInsights.weeklyGoal}</Text>
-            </View>
+          ) : (
+            <Text style={[styles.insightText, { color: colors.mutedForeground }]}>
+              Tap "Generate" to get personalised AI analysis of your progress.
+            </Text>
           )}
         </View>
 
         {/* ── Achievements ── */}
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Achievements</Text>
-        <View style={styles.achieveGrid}>
-          {allBadges.map((badge: any) => (
-            <View
-              key={badge.id ?? badge.label ?? badge.name}
-              style={[styles.achieveCard, { backgroundColor: colors.card, ...colors.shadow.soft, opacity: badge.unlocked ? 1 : 0.45 }]}
-            >
-              <View style={[styles.achieveIcon, { backgroundColor: badge.unlocked ? badge.color + "18" : colors.muted }]}>
-                <Ionicons name={badge.icon} size={20} color={badge.unlocked ? badge.color : colors.mutedForeground} />
+        {hasAchievements ? (
+          <View style={styles.achieveGrid}>
+            {allBadges.map((badge: any) => (
+              <View
+                key={badge.id ?? badge.label ?? badge.name}
+                style={[styles.achieveCard, { backgroundColor: colors.card, ...colors.shadow.soft, opacity: badge.unlocked ? 1 : 0.45 }]}
+              >
+                <View style={[styles.achieveIcon, { backgroundColor: badge.unlocked ? badge.color + "18" : colors.muted }]}>
+                  <Ionicons name={badge.icon} size={20} color={badge.unlocked ? badge.color : colors.mutedForeground} />
+                </View>
+                <Text style={[styles.achieveLabel, { color: badge.unlocked ? colors.foreground : colors.mutedForeground }]} numberOfLines={2}>
+                  {badge.label ?? badge.name}
+                </Text>
+                {!badge.unlocked && <Ionicons name="lock-closed" size={10} color={colors.mutedForeground} />}
               </View>
-              <Text style={[styles.achieveLabel, { color: badge.unlocked ? colors.foreground : colors.mutedForeground }]} numberOfLines={2}>
-                {badge.label ?? badge.name}
-              </Text>
-              {!badge.unlocked && <Ionicons name="lock-closed" size={10} color={colors.mutedForeground} />}
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        ) : (
+          <EmptyCard
+            icon="trophy-outline"
+            title="No achievements yet."
+            subtitle="Complete workouts, log check-ins, and upload InBody reports to earn your first achievement."
+            colors={colors}
+          />
+        )}
 
         {/* ── Upload CTA ── */}
         <TouchableOpacity
@@ -574,6 +717,15 @@ function TransformStat({ value, unit, label, color }: { value: string; unit: str
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
+const emptyStyles = StyleSheet.create({
+  card: { borderRadius: 18, padding: 20, alignItems: "center", gap: 8, borderWidth: 1 },
+  iconWrap: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  title: { fontSize: 15, fontFamily: "Inter_600SemiBold", textAlign: "center" },
+  subtitle: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 19 },
+  cta: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 12, marginTop: 4 },
+  ctaText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
+});
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: 16, gap: 16 },
@@ -584,6 +736,15 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   streakBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
   streakText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+
+  // Onboarding card
+  onboardCard: { borderRadius: 20, padding: 22, alignItems: "center", gap: 10, overflow: "hidden", borderWidth: 1 },
+  onboardIconWrap: { width: 60, height: 60, borderRadius: 30, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  onboardTitle: { fontSize: 17, fontFamily: "Inter_700Bold", textAlign: "center" },
+  onboardSub: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 },
+  onboardCtas: { flexDirection: "row", gap: 10, marginTop: 6 },
+  onboardBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
+  onboardBtnText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
 
   // Fitness Score Card
   scoreCard: { borderRadius: 20, padding: 18, overflow: "hidden" },
@@ -655,6 +816,10 @@ const styles = StyleSheet.create({
   modeTabText: { fontSize: 11, fontFamily: "Inter_500Medium" },
   xLabels: { flexDirection: "row", justifyContent: "space-between" },
   xLabel: { fontSize: 10, fontFamily: "Inter_500Medium" },
+  chartEmpty: { height: 120, borderRadius: 12, borderWidth: 1, borderStyle: "dashed", alignItems: "center", justifyContent: "center", gap: 8, padding: 16 },
+  chartEmptyText: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 18 },
+  chartEmptyBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10 },
+  chartEmptyBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
 
   // AI Insights
   aiInsightsCard: { borderRadius: 20, padding: 18, gap: 12, overflow: "hidden" },

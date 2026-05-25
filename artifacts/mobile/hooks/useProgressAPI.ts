@@ -2,7 +2,8 @@
  * useProgressAPI
  * ─────────────
  * Fetches real progress data from the API server.
- * Falls back gracefully to demo data when not authenticated or API is unavailable.
+ * Returns empty/null state when not authenticated or API is unavailable.
+ * Never falls back to demo/mock data.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -11,9 +12,9 @@ import { useAuth } from "@/context/AuthContext";
 
 function getApiBase(): string {
   const d = process.env.EXPO_PUBLIC_DOMAIN;
-  if (d) return `https://${d}`;
-  if (Platform.OS === "android") return "http://10.0.2.2:3001";
-  return "http://localhost:3001";
+  if (d) return `https://${d}/api`;
+  if (Platform.OS === "android") return "http://10.0.2.2:3001/api";
+  return "http://localhost:3001/api";
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -71,99 +72,80 @@ export interface ProgressDashboard {
   recentCheckin: DailyCheckin | null;
   recentActivity: any[];
   inbodyReports: InbodyReport[];
-  _source: "api" | "demo";
+  _source: "api" | "empty" | "error";
 }
 
-// ─── Demo fallback ─────────────────────────────────────────────────────────────
+// ─── Empty (no-data) state ─────────────────────────────────────────────────────
 
-const DEMO: ProgressDashboard = {
-  weightTrend: [
-    { week: "W1", value: 83.0 }, { week: "W2", value: 82.5 },
-    { week: "W3", value: 81.8 }, { week: "W4", value: 81.2 },
-    { week: "W5", value: 80.5 }, { week: "W6", value: 79.8 },
-    { week: "W7", value: 79.2 }, { week: "W8", value: 78.2 },
-  ],
-  currentMetrics: { weight: 78.2, bodyFat: 18.4, muscle: 32.8, bmi: 24.1, bmr: 1780, visceralFat: 7 },
-  transformationSummary: { weightLost: 4.8, muscleGained: 2.6, fatLost: 3.9, scans: 3, weeks: 11 },
-  workoutStats: { streak: 12, longestStreak: 18 },
-  fitnessScore: { score: 74, label: "Great", breakdown: { streak: 8, bodyComp: 15, recovery: 10, consistency: 16, achievements: 4 } },
-  achievements: [
-    { id: "a1", name: "12 Day Streak", description: "12 consecutive workout days", type: "workout_streak", points: 50, earnedAt: new Date().toISOString() },
-    { id: "a2", name: "50 Workouts", description: "Completed 50 workouts", type: "workout_streak", points: 100, earnedAt: new Date().toISOString() },
-    { id: "a3", name: "5 kg Lost", description: "Lost 5kg from starting weight", type: "progress_milestone", points: 75, earnedAt: new Date().toISOString() },
-    { id: "a4", name: "Consistency", description: "30-day consistency award", type: "workout_streak", points: 60, earnedAt: new Date().toISOString() },
-  ],
+const EMPTY_DASHBOARD: ProgressDashboard = {
+  weightTrend: [],
+  currentMetrics: { weight: null, bodyFat: null, muscle: null, bmi: null, bmr: null, visceralFat: null },
+  transformationSummary: { weightLost: null, muscleGained: null, fatLost: null, scans: 0, weeks: 0 },
+  workoutStats: { streak: 0, longestStreak: 0 },
+  fitnessScore: { score: 0, label: "Getting Started", breakdown: { streak: 0, bodyComp: 0, recovery: 0, consistency: 0, achievements: 0 } },
+  achievements: [],
   recentCheckin: null,
   recentActivity: [],
-  inbodyReports: [
-    { id: "r1", date: "2026-05-15", weight: "78.2", bodyFat: "18.4", muscleMass: "32.8", bmi: "24.1", score: 74, status: "done", aiAnalysis: null },
-    { id: "r2", date: "2026-04-10", weight: "80.5", bodyFat: "20.1", muscleMass: "31.6", bmi: "24.8", score: 68, status: "done", aiAnalysis: null },
-    { id: "r3", date: "2026-03-05", weight: "83.0", bodyFat: "22.3", muscleMass: "30.2", bmi: "25.6", score: 61, status: "done", aiAnalysis: null },
-  ],
-  _source: "demo",
+  inbodyReports: [],
+  _source: "empty",
 };
 
-const DEMO_AI_INSIGHTS = {
-  insights: [
-    "Your muscle mass improved by 2.6 kg since your first scan — progressive overload is working!",
-    "Body fat trending down at 18.4% — continue with current calorie deficit and cardio.",
-    "Visceral fat at 7 is in the healthy range — maintain with regular cardio 3× per week.",
-    "12-day workout streak is strong consistency. Aim for 21 days to cement the habit.",
-  ],
-  weeklyGoal: "Complete 4 workouts, log weight daily, and hit 2,200 kcal target.",
-  recoveryAdvice: "Recovery is looking good. Keep 7–8 hours sleep and maintain active rest days.",
-  source: "demo",
+const EMPTY_AI_INSIGHTS = {
+  insights: [] as string[],
+  weeklyGoal: null as string | null,
+  recoveryAdvice: null as string | null,
+  source: "empty",
 };
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useProgressAPI() {
   const { token } = useAuth();
-  const [dashboard, setDashboard] = useState<ProgressDashboard>(DEMO);
-  const [aiInsights, setAiInsights] = useState(DEMO_AI_INSIGHTS);
+  const [dashboard, setDashboard] = useState<ProgressDashboard>(EMPTY_DASHBOARD);
+  const [aiInsights, setAiInsights] = useState(EMPTY_AI_INSIGHTS);
   const [loading, setLoading] = useState(false);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchDashboard = useCallback(async () => {
-    if (!token) { setDashboard({ ...DEMO, _source: "demo" }); return; }
+    if (!token) {
+      setDashboard({ ...EMPTY_DASHBOARD, _source: "empty" });
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${getApiBase()}/api/progress/dashboard`, {
+      const res = await fetch(`${getApiBase()}/progress/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
-      // Merge real data — fall back field-by-field if API returns empty arrays
-      const wt: TrendPoint[] = data.weightTrend?.length ? data.weightTrend : DEMO.weightTrend;
-
       setDashboard({
-        weightTrend: wt,
-        currentMetrics: data.currentMetrics?.weight ? data.currentMetrics : DEMO.currentMetrics,
-        transformationSummary: data.transformationSummary?.weightLost != null ? data.transformationSummary : DEMO.transformationSummary,
-        workoutStats: data.workoutStats ?? DEMO.workoutStats,
-        fitnessScore: data.fitnessScore ?? DEMO.fitnessScore,
-        achievements: data.achievements?.length ? data.achievements : DEMO.achievements,
+        weightTrend: data.weightTrend ?? [],
+        currentMetrics: data.currentMetrics ?? EMPTY_DASHBOARD.currentMetrics,
+        transformationSummary: data.transformationSummary ?? EMPTY_DASHBOARD.transformationSummary,
+        workoutStats: data.workoutStats ?? EMPTY_DASHBOARD.workoutStats,
+        fitnessScore: data.fitnessScore ?? EMPTY_DASHBOARD.fitnessScore,
+        achievements: data.achievements ?? [],
         recentCheckin: data.recentCheckin ?? null,
         recentActivity: data.recentActivity ?? [],
-        inbodyReports: data.inbodyReports?.length ? data.inbodyReports : DEMO.inbodyReports,
+        inbodyReports: data.inbodyReports ?? [],
         _source: "api",
       });
     } catch (err: any) {
       setError(err.message);
-      setDashboard({ ...DEMO, _source: "demo" });
+      setDashboard({ ...EMPTY_DASHBOARD, _source: "error" });
     } finally {
       setLoading(false);
     }
   }, [token]);
 
   const fetchAIInsights = useCallback(async () => {
-    if (!token) return DEMO_AI_INSIGHTS;
+    if (!token) return EMPTY_AI_INSIGHTS;
     setInsightsLoading(true);
     try {
-      const res = await fetch(`${getApiBase()}/api/progress/ai-insights`, {
+      const res = await fetch(`${getApiBase()}/progress/ai-insights`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -171,8 +153,8 @@ export function useProgressAPI() {
       setAiInsights(data);
       return data;
     } catch {
-      setAiInsights(DEMO_AI_INSIGHTS);
-      return DEMO_AI_INSIGHTS;
+      setAiInsights(EMPTY_AI_INSIGHTS);
+      return EMPTY_AI_INSIGHTS;
     } finally {
       setInsightsLoading(false);
     }
@@ -181,14 +163,13 @@ export function useProgressAPI() {
   const logCheckin = useCallback(async (data: Omit<DailyCheckin, "id" | "checkinDate">) => {
     if (!token) return null;
     try {
-      const res = await fetch(`${getApiBase()}/api/progress/checkin`, {
+      const res = await fetch(`${getApiBase()}/progress/checkin`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      // Optimistically update recentCheckin in dashboard
       setDashboard(prev => ({ ...prev, recentCheckin: { ...data, checkinDate: new Date().toISOString() } }));
       return json;
     } catch (err: any) {
@@ -199,13 +180,13 @@ export function useProgressAPI() {
   const logWeight = useCallback(async (weightKg: number, notes?: string) => {
     if (!token) return null;
     try {
-      const res = await fetch(`${getApiBase()}/api/progress/weight`, {
+      const res = await fetch(`${getApiBase()}/progress/weight`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ weightKg, notes }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      await fetchDashboard(); // refresh trends
+      await fetchDashboard();
       return await res.json();
     } catch {
       return null;

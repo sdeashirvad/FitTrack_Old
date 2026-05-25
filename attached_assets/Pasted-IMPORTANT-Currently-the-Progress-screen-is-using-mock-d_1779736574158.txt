@@ -1,0 +1,347 @@
+IMPORTANT:
+Currently the Progress screen is using mock/demo/static data instead of real database-driven analytics.
+
+There is also a failing API request:
+
+GET http://localhost:5000/api/progress/dashboard → 404
+
+Your task is to fully inspect and fix the progress tracking architecture and convert the entire Progress system into a real database-connected analytics engine.
+
+========================================
+FIRST STEP — ANALYZE CURRENT SYSTEM
+========================================
+
+Before writing code:
+
+Inspect these files carefully:
+- lib/db/
+- artifacts/api-server/src/routes/progress.ts
+- artifacts/mobile/app/(tabs)/progress.tsx
+
+Analyze:
+- existing progress UI
+- existing cards
+- graphs
+- current state management
+- current DB schema
+- current APIs
+- existing progress tables
+- current mock/demo data structure
+
+IMPORTANT:
+DO NOT rewrite or redesign existing UI unnecessarily.
+
+The current UI/screens already look good.
+
+Your goal is to:
+- preserve current UI
+- preserve navigation
+- preserve animations/layouts
+- replace demo/static data with real dynamic database data
+
+========================================
+FIX THE 404 API ISSUE
+========================================
+
+Currently:
+GET /api/progress/dashboard → 404
+
+Find the issue and fix:
+- missing route
+- incorrect export
+- incorrect router registration
+- incorrect API path
+- incorrect server mounting
+- route mismatch
+- auth middleware issues
+
+Ensure:
+GET /api/progress/dashboard works correctly.
+
+========================================
+REMOVE ALL MOCK DATA
+========================================
+
+Currently many values are hardcoded:
+- charts
+- weight trends
+- achievements
+- body fat
+- calories
+- muscle mass
+- workout streaks
+- graphs
+- progress cards
+
+Replace ALL demo/mock data with:
+- real PostgreSQL data
+- calculated analytics
+- AI-generated insights
+
+========================================
+CREATE REAL PROGRESS TRACKING SYSTEM
+========================================
+
+The progress dashboard should become a real fitness intelligence system.
+
+Track data from:
+- InBody reports
+- Exercise logs
+- Workout completion
+- Weight entries
+- Water intake
+- Protein intake
+- Calories
+- Sleep
+- Recovery
+- Daily steps
+- Strength progression
+
+========================================
+DYNAMIC DASHBOARD METRICS
+========================================
+
+Generate real metrics like:
+- Current weight
+- Weight change
+- Body fat change
+- Muscle gain
+- Workout streak
+- Calories trend
+- Weekly consistency
+- Recovery score
+- AI fitness score
+
+All metrics should be dynamically calculated from database data.
+
+========================================
+IF USER HAS NO DATA
+========================================
+
+Currently the app should NOT show fake analytics when no data exists.
+
+Instead:
+
+Detect empty states intelligently.
+
+If there is insufficient data:
+show smart onboarding prompts like:
+
+--------------------------------
+"No progress data yet."
+
+Suggestions:
+- Upload your first InBody report
+- Complete your first workout
+- Add weight entries
+- Track meals
+- Log water intake
+--------------------------------
+
+Show actionable CTA buttons:
+- Upload Report
+- Start Workout
+- Add Weight
+- Log Nutrition
+
+========================================
+SMART EMPTY STATES
+========================================
+
+Examples:
+
+If no workout data:
+"Complete workouts to unlock strength analytics."
+
+If no InBody reports:
+"Upload your first body composition report to see transformation insights."
+
+If no nutrition data:
+"Track meals to unlock AI nutrition analysis."
+
+========================================
+REAL PROGRESS ENGINE
+========================================
+
+Build proper analytics calculations.
+
+Examples:
+- weight difference
+- body fat reduction %
+- muscle gain %
+- consistency score
+- workout completion %
+- calorie adherence
+- protein consistency
+
+========================================
+STRENGTH PROGRESSION TRACKING
+========================================
+
+Track:
+- Bench press progression
+- Squat progression
+- Deadlift progression
+- Exercise PRs
+- Workout volume progression
+
+Calculate:
+- weekly improvements
+- monthly improvements
+- max lifts
+- consistency
+
+========================================
+AI-POWERED INSIGHTS
+========================================
+
+Use Gemini AI to generate dynamic progress insights.
+
+Examples:
+- “Your muscle mass increased by 1.4kg this month.”
+- “Your workout consistency improved by 18%.”
+- “Recovery levels are dropping due to poor sleep.”
+- “Your calorie deficit is too aggressive.”
+
+AI should analyze:
+- workouts
+- recovery
+- nutrition
+- progress
+- InBody trends
+
+========================================
+PROGRESS DASHBOARD API
+========================================
+
+Create/Improve APIs:
+
+GET /api/progress/dashboard
+GET /api/progress/history
+GET /api/progress/strength
+GET /api/progress/analytics
+GET /api/progress/insights
+
+Ensure APIs:
+- are authenticated
+- return real data
+- are optimized
+- handle empty states
+
+========================================
+DATABASE REQUIREMENTS
+========================================
+
+Inspect existing tables first.
+
+Reuse existing tables if possible.
+
+Only create missing tables if necessary.
+
+Possible tables:
+- progress_logs
+- weight_logs
+- workout_logs
+- strength_progress
+- nutrition_logs
+- hydration_logs
+- inbody_reports
+- ai_insights
+- achievements
+
+========================================
+DYNAMIC ACHIEVEMENT SYSTEM
+========================================
+
+Generate achievements dynamically.
+
+Examples:
+- First Workout
+- 7-Day Streak
+- 5kg Lost
+- New PR
+- Consistent Protein Intake
+
+Achievements should unlock automatically based on DB activity.
+
+========================================
+REAL GRAPH SYSTEM
+========================================
+
+Charts should fetch real data from DB:
+- weight trends
+- body fat trends
+- calories
+- muscle mass
+- workout frequency
+- strength growth
+
+Support:
+- weekly
+- monthly
+- yearly views
+
+========================================
+BACKGROUND CALCULATIONS
+========================================
+
+Implement services/utilities for:
+- streak calculations
+- transformation analytics
+- consistency scoring
+- recovery scoring
+- milestone detection
+
+========================================
+PERFORMANCE REQUIREMENTS
+========================================
+
+Optimize:
+- DB queries
+- chart rendering
+- analytics calculations
+- API response times
+
+Use:
+- caching where appropriate
+- aggregation queries
+- optimized selectors
+
+========================================
+UI/UX REQUIREMENTS
+========================================
+
+DO NOT redesign the current progress screen completely.
+
+Instead:
+- enhance existing UI
+- keep current visual style
+- preserve current layout
+- preserve current navigation
+
+Add:
+- better loading states
+- skeleton loaders
+- smooth transitions
+- empty state cards
+- dynamic insights
+
+========================================
+FINAL EXPECTATION
+========================================
+
+The Progress screen should evolve from:
+"static demo dashboard"
+
+into:
+"a real AI-powered fitness analytics system"
+
+where:
+- all metrics come from DB
+- all graphs are real
+- all achievements are dynamic
+- AI generates real insights
+- empty users get onboarding guidance
+- experienced users get advanced analytics
+
+[db](lib/db/) [progress.ts](artifacts/api-server/src/routes/progress.ts) [progress.tsx](artifacts/mobile/app/(tabs\)/progress.tsx)

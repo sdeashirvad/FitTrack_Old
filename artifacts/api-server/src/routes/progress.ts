@@ -12,12 +12,12 @@ import {
 
 const router = Router();
 
-router.get("/api/progress/dashboard", requireAuth, getProgressDashboard);
-router.post("/api/progress/checkin", requireAuth, saveCheckin);
-router.get("/api/progress/checkin/today", requireAuth, getTodayCheckin);
-router.get("/api/progress/checkins/recent", requireAuth, getRecentCheckins);
-router.post("/api/progress/weight", requireAuth, logWeight);
-router.get("/api/progress/ai-insights", requireAuth, getAIInsights);
-router.get("/api/progress/fitness-score", requireAuth, getFitnessScore);
+router.get("/progress/dashboard", requireAuth, getProgressDashboard);
+router.post("/progress/checkin", requireAuth, saveCheckin);
+router.get("/progress/checkin/today", requireAuth, getTodayCheckin);
+router.get("/progress/checkins/recent", requireAuth, getRecentCheckins);
+router.post("/progress/weight", requireAuth, logWeight);
+router.get("/progress/ai-insights", requireAuth, getAIInsights);
+router.get("/progress/fitness-score", requireAuth, getFitnessScore);
 
 export default router;

@@ -1,0 +1,416 @@
+IMPORTANT:
+Before starting development, first analyze the EXISTING progress, analysis, workout, and dashboard screens already implemented in the application.
+
+The current app already contains:
+- Progress graphs
+- Achievement cards
+- Workout screens
+- Analysis screens
+- InBody cards
+- Dashboard metrics
+- Bottom tab navigation
+- Premium UI components
+
+DO NOT:
+- Rewrite existing screens
+- Break current navigation
+- Replace existing design system
+- Change current theme/colors
+- Remove working UI
+
+Your job is to:
+EXTEND the current application professionally and convert static/mock data into a real AI-powered dynamic progress tracking system connected to the database.
+
+========================================
+FEATURE GOAL
+========================================
+
+Build a complete AI-powered Fitness Progress Tracking System.
+
+The system should help users track:
+- Weight loss/gain
+- Muscle gain
+- Body fat reduction
+- Workout consistency
+- Calories
+- Protein intake
+- Water intake
+- Sleep
+- Recovery
+- Strength progression
+- Energy levels
+- Daily activity
+- Weekly performance
+- Transformation milestones
+
+The entire progress system should feel:
+- intelligent
+- motivating
+- personalized
+- data-driven
+- premium
+
+========================================
+IMPORTANT DEVELOPMENT APPROACH
+========================================
+
+FIRST:
+- inspect current screens/components
+- inspect current progress graphs
+- inspect analysis cards
+- inspect workout cards
+- inspect current UI system
+
+THEN:
+- connect existing screens to real backend data
+- extend UI carefully
+- preserve current premium look and feel
+
+MOST IMPORTANT:
+Reuse existing:
+- cards
+- graphs
+- progress components
+- layouts
+- colors
+- spacing
+- animations
+
+========================================
+REMOVE MOCK DATA
+========================================
+
+Currently many screens use static/mock data.
+
+Replace ALL mock/static progress data with:
+- real database data
+- AI-generated insights
+- real analytics
+
+========================================
+DATABASE-DRIVEN PROGRESS SYSTEM
+========================================
+
+All progress should come from:
+- InBody reports
+- Daily weight entries
+- Calories consumed
+- Protein intake
+- Water intake
+- Daily steps
+- Workout completion
+- Strength progression
+- Sleep tracking
+- Recovery logs
+- User check-ins
+
+========================================
+CORE PROGRESS TRACKING FEATURES
+========================================
+
+Track:
+- Weight changes
+- Body fat %
+- Muscle mass
+- Strength increases
+- Calories consumed
+- Protein consistency
+- Water consistency
+- Workout streaks
+- Recovery trends
+- Daily energy levels
+
+========================================
+SMART GOAL SYSTEM
+========================================
+
+Users should set goals like:
+- Fat Loss
+- Muscle Gain
+- Strength Gain
+- Maintenance
+- Athletic Performance
+
+AI should dynamically adjust:
+- calorie targets
+- workout recommendations
+- recovery suggestions
+- protein intake
+- cardio suggestions
+
+========================================
+DYNAMIC AI PROGRESS ANALYSIS
+========================================
+
+Use Gemini AI to analyze:
+- InBody trends
+- workout consistency
+- calories
+- sleep
+- water intake
+- energy levels
+- strength progression
+
+AI should generate:
+- progress insights
+- warnings
+- recommendations
+- motivation
+- recovery advice
+
+========================================
+ENERGY & RECOVERY SYSTEM
+========================================
+
+Every day user can enter:
+- energy level
+- soreness
+- fatigue
+- mood
+- recovery feeling
+
+Example:
+“How energetic do you feel today?”
+- Very Low
+- Low
+- Moderate
+- High
+- Excellent
+
+========================================
+AI ADAPTIVE SYSTEM
+========================================
+
+Based on:
+- energy level
+- recovery
+- sleep
+- soreness
+- workout performance
+
+Gemini AI should:
+- increase/decrease calories
+- increase/decrease workout intensity
+- suggest rest days
+- recommend hydration
+- adjust protein intake
+- recommend cardio changes
+
+Example:
+--------------------------------
+"You reported low recovery for 3 days.
+Reduce workout intensity by 15% and increase sleep."
+--------------------------------
+
+========================================
+STRENGTH PROGRESSION SYSTEM
+========================================
+
+Track exercise strength progression over time.
+
+Examples:
+- Bench Press progression
+- Squat progression
+- Deadlift progression
+- Dumbbell Press progression
+
+Track:
+- max weight lifted
+- reps progression
+- total workout volume
+- endurance improvements
+
+Generate:
+- weekly comparison
+- monthly comparison
+- PR tracking
+- strength analytics
+
+========================================
+EXERCISE PERFORMANCE ANALYTICS
+========================================
+
+For each exercise show:
+- Current max weight
+- Previous max weight
+- Weekly improvement
+- Volume progression
+- Muscle activation score
+- Consistency
+
+========================================
+DYNAMIC MILESTONE SYSTEM
+========================================
+
+Create achievement/milestone tracking.
+
+Examples:
+- Lost 5kg
+- 30-day streak
+- 100 workouts completed
+- Increased bench press by 10kg
+- Hit protein target for 14 days
+- Improved body fat %
+
+Show:
+- animated achievement cards
+- progress unlock animations
+- motivational milestones
+
+========================================
+AI INSIGHTS SECTION
+========================================
+
+Create dynamic AI-generated insights.
+
+Examples:
+- “Muscle mass increased by 1.2kg in 30 days.”
+- “Your recovery score dropped this week.”
+- “Protein intake consistency improved.”
+- “Leg strength improved by 18%.”
+
+========================================
+ADVANCED PROGRESS DASHBOARD
+========================================
+
+Extend current progress screen with:
+- body analytics
+- recovery analytics
+- calorie analytics
+- workout consistency
+- muscle growth analytics
+- fat loss analytics
+- strength analytics
+
+========================================
+GRAPH SYSTEM
+========================================
+
+Use interactive charts for:
+- weight trends
+- muscle growth
+- body fat changes
+- calories
+- protein intake
+- sleep trends
+- workout frequency
+- strength progression
+
+Graphs should support:
+- daily
+- weekly
+- monthly
+- yearly views
+
+========================================
+TRANSFORMATION TIMELINE
+========================================
+
+Create transformation history.
+
+Users can upload:
+- progress photos
+- monthly reports
+- measurements
+
+Generate:
+- before/after comparison
+- transformation timeline
+- visual progress history
+
+========================================
+AI FITNESS SCORE
+========================================
+
+Generate dynamic AI fitness score using:
+- workout consistency
+- sleep
+- calories
+- recovery
+- hydration
+- strength progression
+
+Example:
+Fitness Score: 84/100
+
+AI explains:
+- why score changed
+- how to improve
+
+========================================
+DATABASE REQUIREMENTS
+========================================
+
+Create or extend tables:
+
+- progress_logs
+- daily_checkins
+- strength_progress
+- calorie_logs
+- hydration_logs
+- sleep_logs
+- recovery_logs
+- ai_progress_insights
+- achievements
+- transformation_photos
+
+========================================
+BACKGROUND AUTOMATION
+========================================
+
+Implement automated:
+- streak calculations
+- progress summaries
+- weekly reports
+- AI recommendations
+- milestone detection
+
+========================================
+NOTIFICATIONS SYSTEM
+========================================
+
+Send intelligent notifications:
+- workout reminders
+- hydration reminders
+- recovery alerts
+- calorie warnings
+- milestone celebrations
+
+========================================
+UI/UX REQUIREMENTS
+========================================
+
+The feature should feel:
+- premium
+- motivational
+- futuristic
+- deeply personalized
+
+Use:
+- animated graphs
+- glassmorphism cards
+- smooth transitions
+- interactive analytics
+- progress rings
+- fitness-focused visualizations
+
+MOST IMPORTANT:
+The new progress system MUST match the current app UI and integrate naturally with the already existing screens shown in the project screenshots.
+
+========================================
+EXPECTED FINAL RESULT
+========================================
+
+The app should evolve from:
+"simple fitness tracker"
+
+into:
+"AI-powered personal fitness intelligence system"
+
+where users can:
+- deeply track transformations
+- understand recovery
+- monitor strength progression
+- receive adaptive AI guidance
+- visualize long-term progress
+- stay motivated through dynamic milestones

@@ -3,7 +3,7 @@ import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
@@ -16,17 +16,17 @@ function NativeTabLayout() {
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>Home</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="analysis">
+        <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
+        <Label>Analysis</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="workout">
         <Icon sf={{ default: "dumbbell", selected: "dumbbell.fill" }} />
         <Label>Workout</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="diet">
-        <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
-        <Label>Diet</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="gym">
-        <Icon sf={{ default: "building.2", selected: "building.2.fill" }} />
-        <Label>Gym</Label>
+      <NativeTabs.Trigger name="progress">
+        <Icon sf={{ default: "chart.line.uptrend.xyaxis", selected: "chart.line.uptrend.xyaxis" }} />
+        <Label>Progress</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person", selected: "person.fill" }} />
@@ -38,29 +38,27 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const colors = useColors();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
 
-  const tabBarHeight = isWeb ? 84 : 60;
+  const tabBarHeight = isWeb ? 84 : 64;
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarInactiveTintColor: "#BBBBC0",
         headerShown: false,
         tabBarShowLabel: true,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: isIOS ? "transparent" : colors.card,
+          backgroundColor: isIOS ? "transparent" : "#FFFFFF",
           borderTopWidth: 0.5,
-          borderTopColor: colors.border,
+          borderTopColor: "#F0F0F2",
           elevation: 0,
           height: tabBarHeight,
-          paddingBottom: isWeb ? 14 : 6,
-          paddingTop: 6,
+          paddingBottom: isWeb ? 14 : 8,
+          paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 10,
@@ -70,13 +68,13 @@ function ClassicTabLayout() {
         tabBarBackground: () =>
           isIOS ? (
             <BlurView
-              intensity={80}
-              tint={isDark ? "dark" : "light"}
+              intensity={90}
+              tint="extraLight"
               style={StyleSheet.absoluteFill}
             />
           ) : isWeb ? (
             <View
-              style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]}
+              style={[StyleSheet.absoluteFill, { backgroundColor: "#FFFFFF" }]}
             />
           ) : null,
       }}
@@ -87,17 +85,21 @@ function ClassicTabLayout() {
           title: "Home",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView
-                name={focused ? "house.fill" : "house"}
-                tintColor={color}
-                size={24}
-              />
+              <SymbolView name={focused ? "house.fill" : "house"} tintColor={color} size={24} />
             ) : (
-              <Ionicons
-                name={focused ? "home" : "home-outline"}
-                size={22}
-                color={color}
-              />
+              <Ionicons name={focused ? "home" : "home-outline"} size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="analysis"
+        options={{
+          title: "Analysis",
+          tabBarIcon: ({ color, focused }) =>
+            isIOS ? (
+              <SymbolView name={focused ? "chart.bar.fill" : "chart.bar"} tintColor={color} size={24} />
+            ) : (
+              <Ionicons name={focused ? "stats-chart" : "stats-chart-outline"} size={22} color={color} />
             ),
         }}
       />
@@ -107,57 +109,21 @@ function ClassicTabLayout() {
           title: "Workout",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView
-                name="dumbbell"
-                tintColor={color}
-                size={24}
-              />
+              <SymbolView name="dumbbell" tintColor={color} size={24} />
             ) : (
-              <Ionicons
-                name={focused ? "barbell" : "barbell-outline"}
-                size={22}
-                color={color}
-              />
+              <Ionicons name={focused ? "barbell" : "barbell-outline"} size={22} color={color} />
             ),
         }}
       />
       <Tabs.Screen
-        name="diet"
+        name="progress"
         options={{
-          title: "Diet",
+          title: "Progress",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView
-                name="fork.knife"
-                tintColor={color}
-                size={24}
-              />
+              <SymbolView name="chart.line.uptrend.xyaxis" tintColor={color} size={24} />
             ) : (
-              <Ionicons
-                name={focused ? "restaurant" : "restaurant-outline"}
-                size={22}
-                color={color}
-              />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="gym"
-        options={{
-          title: "Gym",
-          tabBarIcon: ({ color, focused }) =>
-            isIOS ? (
-              <SymbolView
-                name={focused ? "building.2.fill" : "building.2"}
-                tintColor={color}
-                size={24}
-              />
-            ) : (
-              <Ionicons
-                name={focused ? "business" : "business-outline"}
-                size={22}
-                color={color}
-              />
+              <Ionicons name={focused ? "trending-up" : "trending-up-outline"} size={22} color={color} />
             ),
         }}
       />
@@ -167,20 +133,14 @@ function ClassicTabLayout() {
           title: "Profile",
           tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView
-                name={focused ? "person.fill" : "person"}
-                tintColor={color}
-                size={24}
-              />
+              <SymbolView name={focused ? "person.fill" : "person"} tintColor={color} size={24} />
             ) : (
-              <Ionicons
-                name={focused ? "person" : "person-outline"}
-                size={22}
-                color={color}
-              />
+              <Ionicons name={focused ? "person" : "person-outline"} size={22} color={color} />
             ),
         }}
       />
+      <Tabs.Screen name="diet" options={{ href: null }} />
+      <Tabs.Screen name="gym" options={{ href: null }} />
     </Tabs>
   );
 }

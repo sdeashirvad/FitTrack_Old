@@ -5,6 +5,7 @@ import {
   numeric,
   index,
   jsonb,
+  type AnyPgColumn,
   pgTable,
   text,
   timestamp,
@@ -20,7 +21,7 @@ export const exerciseCategories = pgTable("exercise_categories", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull().unique(),
   description: text("description"),
-  parentId: uuid("parent_id").references(() => exerciseCategories.id),
+  parentId: uuid("parent_id").references((): AnyPgColumn => exerciseCategories.id),
 });
 
 export const exercises = pgTable(
@@ -29,18 +30,39 @@ export const exercises = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
     categoryId: uuid("category_id").references(() => exerciseCategories.id),
+    slug: text("slug"),
+    aliases: text("aliases").array(),
+    bodyPart: text("body_part"),
     primaryMuscle: text("primary_muscle"),
+    targetMuscle: text("target_muscle"),
     secondaryMuscle: text("secondary_muscle"),
+    secondaryMuscles: text("secondary_muscles").array(),
     equipment: text("equipment").array(),
     difficulty: difficultyLevel("difficulty"),
+    mechanics: text("mechanics"),
+    forceType: text("force_type"),
     instructions: text("instructions"),
+    tips: text("tips").array(),
+    useCases: jsonb("use_cases"),
+    contraindications: text("contraindications").array(),
+    gifUrl: text("gif_url"),
+    imageUrl: text("image_url"),
+    videoUrl: text("video_url"),
+    youtubeUrl: text("youtube_url"),
+    source: text("source"),
+    sourceExerciseId: text("source_exercise_id"),
     media: jsonb("media"),
     isPublic: boolean("is_public").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
     nameIndex: index("exercises_name_idx").on(table.name),
+    slugIndex: uniqueIndex("exercises_slug_idx").on(table.slug),
     categoryIndex: index("exercises_category_id_idx").on(table.categoryId),
+    bodyPartIndex: index("exercises_body_part_idx").on(table.bodyPart),
+    targetMuscleIndex: index("exercises_target_muscle_idx").on(table.targetMuscle),
+    sourceExerciseIndex: uniqueIndex("exercises_source_exercise_idx").on(table.source, table.sourceExerciseId),
   }),
 );
 
@@ -103,7 +125,7 @@ export const memberWorkoutPlans = pgTable(
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
     endDate: timestamp("end_date", { withTimezone: true }),
     status: planStatus("status").notNull().default("active"),
-    progressPercent: numeric("progress_percent").default(0),
+    progressPercent: numeric("progress_percent").default("0"),
     assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
@@ -187,7 +209,7 @@ export type ExerciseProgress = InferModel<typeof exerciseProgress>;
 export type ExerciseVariation = InferModel<typeof exerciseVariations>;
 
 export const insertExerciseCategorySchema = createInsertSchema(exerciseCategories).omit({ id: true });
-export const insertExerciseSchema = createInsertSchema(exercises).omit({ id: true, createdAt: true });
+export const insertExerciseSchema = createInsertSchema(exercises).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertWorkoutPlanTemplateSchema = createInsertSchema(workoutPlanTemplates).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertWorkoutPlanDaySchema = createInsertSchema(workoutPlanDays).omit({ id: true });
 export const insertWorkoutPlanItemSchema = createInsertSchema(workoutPlanItems).omit({ id: true });

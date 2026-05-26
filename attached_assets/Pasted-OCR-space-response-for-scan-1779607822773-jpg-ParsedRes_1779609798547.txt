@@ -1,0 +1,20 @@
+OCR.space response for scan_1779607822773.jpg: {
+  "ParsedResults": [
+    {
+      "TextOverlay": {
+        "Lines": [],
+        "HasOverlay": false,
+        "Message": "Text overlay is not provided as it is not requested"
+      },
+      "TextOrientation": "0",
+      "FileParseExitCode": 1,
+      "ParsedText": "Bodv Composition Analysis\r\nTotal ammnt of water my body Total Body Water ( )\r\nInBody\r\nHeight\r\n45.4\r\nGender\r\nI\r\nMale\r\nnmat j to budd nusc/es\r\nProtein\r\nWhat Ineedfor stongbones Mineral\r\nWhere myæessenergysstored Body Fat Mass\r\n(kei\r\nTest Date / Time\r\n2026.05. (M. 08: 1 1\r\n( 40. 0--49. 0 )\r\n4.67\r\nSum of he ±ove\r\nInBody Score\r\n4 9 / 1 00 Pomts\r\n* Total score that reflects thc evaluation of lxxiy\r\ncomposition. A muscular person may score over\r\n100 points,\r\nWeight Control\r\nWeight\r\n45.4 ( )\r\n109.6 (60.6-82.0 )\r\nOver\r\n109. 6\r\nTarget Weight\r\nWeight Control\r\nFat Contol\r\nMuscle Control\r\n75. 5kg\r\n-34. 1\r\n-34. 1 kg\r\n0. 0 kg\r\nMuscle-FatAnalysis\r\nNormal\r\n85\r\nWeight\r\n100 115\r\n130\r\n143\r\nSMM\r\n80\r\n90 100 110\r\nMas )\r\n40\r\nBodyFatMass (k?)\r\n160\r\nBMI\r\nPBF\r\nSliohtly\r\nCJ Normal O Under Ovir\r\nD Normal C] Slightly Mover\r\nOver\r\nObesity Analysis\r\nUnder\r\nm Normai\r\nBMI\r\n15, o\r\n18.5\r\n25. o\r\n(kgm2)\r\n120\r\n220\r\n.10. O\r\n130\r\n280\r\n38. o\r\n33. 8\r\nBody Index\r\n140\r\n340\r\n35.0\r\n150\r\ngoo\r\n45. o\r\ngoro\r\n160\r\n460\r\n50. o\r\n45.0\r\n170\r\n520\r\n55, o\r\n50.0\r\nFat Mass\r\nEvaluancn\r\nWaist-Hip Ratio\r\no. 80 0. 90\r\n1. 14\r\nVisceral Fat Level\r\nLow\r\nLevel 22\r\nResearch Parameters\r\n10\r\nHio\r\nPBF\r\nPerccrv Body\r\n0.0\r\n5.0\r\n10.0\r\n15. o\r\n25.0\r\nLean Mass\r\nEvaluation\r\nFat Free Mass\r\nBasal Metabdic Rate\r\nObesity Deyee\r\nSMI\r\n64.2kg\r\n1756kcaI ( 2181-2583)\r\n154% ( 90-110 )\r\n8. 5 kgim2\r\nSegmental Lean Analysis\r\nSegmental Fat Analysis\r\nRecanmendedcdonent*e 2966 kcal\r\nCalorie Expenditure of Exercise\r\n3.\r\nNonnal\r\n9. 87\r\nNormal\r\n30.\r\nNormal\r\n3. 88\r\nNormal\r\n10.\r\nNormal\r\n4. 4 kg\r\nOver\r\n5.6kg\r\nOver\r\n23. 7 kg\r\nOver\r\nOver\r\nOver\r\nGolf\r\nV%lking\r\nBafinton\r\nTennis\r\nBoxing\r\nMountain Climbing\r\nJQanese Fencing\r\n193 Gateball\r\n219 Yoga\r\n248 Table Tennis\r\n329 Bicycling\r\n329 Basketball\r\n357 Jtmping Rg)e\r\n384 Jogging\r\n384 Swmming\r\n548 Racketball\r\n548 Taekwondo\r\n208\r\n219\r\n248\r\n329\r\n329\r\n384\r\n384\r\n384\r\n548\r\n548\r\n* Segmental fat is estimated.\r\n• Based on your current weight\r\n• Based on 30 minute duration\r\nImpedance\r\n20kHz 311.8 323.9 25.2 X57.8 270.7\r\n100kHz 281.5 294.0 21.8 427.2 239.9\r\nh)dy Composition History\r\n109.6\\\r\nVeight (kg)\r\n(kg)\r\nMusk Maz\r\n(00) 41 5\r\n04*nt o Total\r\n",
+      "ErrorMessage": "",
+      "ErrorDetails": ""
+    }
+  ],
+  "OCRExitCode": 1,
+  "IsErroredOnProcessing": false,
+  "ProcessingTimeInMilliseconds": "3749",
+  "SearchablePDFURL": "Searchable PDF not generated as it was not requested."
+}

@@ -1,0 +1,78 @@
+The current InBody analysis is working, but the AI analysis is incomplete compared to the actual report data visible in the uploaded InBody report. Enhance the OCR extraction, metric parsing, AI schema, backend response, and frontend rendering to support FULL professional InBody report analysis. The current UI only shows basic fields like weight, BMI, body fat, BMR, and visceral fat, but the report contains many additional important health metrics that are currently missing from both extraction and analysis.
+
+Add extraction and analysis support for ALL important InBody metrics including:
+
+* Total Body Water
+* Protein
+* Mineral
+* Body Fat Mass
+* Skeletal Muscle Mass (SMM)
+* Fat Free Mass
+* Soft Lean Mass
+* Obesity Degree
+* Waist Hip Ratio (WHR)
+* Recommended Calorie Intake
+* InBody Score
+* Muscle Control
+* Fat Control
+* Weight Control
+* Target Weight
+* Segmental Muscle/Fat Analysis if available
+* Research Parameters
+* Body Composition Analysis
+* Muscle-Fat Analysis
+* Obesity Analysis
+
+Improve OCR parsing so these values are extracted reliably even from noisy scans, tilted images, shadows, folds, or different report layouts. Add better regex extraction and structured metric normalization before AI processing.
+
+Upgrade the AI response so it generates deeper professional insights instead of only short generic summaries. The AI should explain:
+
+* why the score is low/high
+* obesity risk
+* muscle imbalance
+* fat distribution
+* metabolic health
+* hydration condition
+* recommended weight goal
+* body recomposition strategy
+* risks of high visceral fat
+* WHR implications
+* muscle-to-fat ratio interpretation
+* realistic transformation goals
+
+Add dedicated analysis sections/cards for:
+
+* Body Composition Analysis
+* Muscle-Fat Analysis
+* Obesity Analysis
+* Weight Control Analysis
+* Hydration & Protein Analysis
+* Research Parameters
+* Metabolic Health
+* Waist-Hip Ratio Analysis
+
+The AI should also explain target values and compare current vs ideal ranges in a clean readable format.
+
+Improve frontend rendering to display all extracted metrics in a premium dashboard without redesigning the existing UI style. Reuse current components and extend them modularly. Add expandable sections/cards if needed to avoid clutter. Make the analysis feel comparable to premium fitness apps like InBody, Whoop, Fitbit Premium, or professional trainer dashboards.
+
+Very important:
+
+* Do NOT remove current working features.
+* Do NOT redesign existing UI.
+* Reuse current architecture/components.
+* Keep responses concise but insightful.
+* Never return incomplete JSON.
+* Preserve numeric values exactly.
+* Ensure frontend never shows undefined/null/-- for valid extracted metrics.
+
+Also improve body score calculation logic using:
+
+* BMI
+* Body Fat %
+* Skeletal Muscle Mass
+* Visceral Fat
+* WHR
+* Obesity Degree
+  instead of the current simplistic formula.
+
+The final result should feel like a complete AI-powered professional body composition analysis platform instead of a basic metric viewer.

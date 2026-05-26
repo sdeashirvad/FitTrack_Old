@@ -32,7 +32,7 @@ function RootLayoutNav() {
         options={{ animation: "slide_from_right", headerShown: false }}
       />
       <Stack.Screen
-        name="inbody"
+        name="inbody/index"
         options={{ animation: "slide_from_right", headerShown: false }}
       />
       <Stack.Screen

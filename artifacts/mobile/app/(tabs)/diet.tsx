@@ -1,5 +1,6 @@
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ProgressRing } from "@/components/ui/ProgressRing";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useFitness } from "@/context/FitnessContext";
 import { useColors } from "@/hooks/useColors";
 import { Ionicons } from "@expo/vector-icons";
@@ -115,15 +116,15 @@ export default function DietScreen() {
         ]}
       >
         <View style={styles.headerRow}>
-          <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+          <Text style={[colors.typography.h1, { color: colors.foreground }]}>
             Diet
           </Text>
           <TouchableOpacity
             onPress={() => setShowAdd(true)}
             style={[styles.addBtn, { backgroundColor: colors.secondary }]}
           >
-            <Ionicons name="add" size={20} color="#FFFFFF" />
-            <Text style={[styles.addBtnTxt, { fontFamily: "Inter_600SemiBold" }]}>Add Meal</Text>
+            <Ionicons name="add" size={20} color={colors.primaryForeground} />
+            <Text style={[colors.typography.bodyMedium, { color: colors.primaryForeground }]}>Add Meal</Text>
           </TouchableOpacity>
         </View>
 
@@ -155,7 +156,7 @@ export default function DietScreen() {
             { label: "Fat", value: totalFat, color: colors.yellow, max: 70 },
           ].map((m) => (
             <View key={m.label} style={styles.macroRow}>
-              <Text style={[styles.macroLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[colors.typography.caption, { color: colors.mutedForeground, width: 54 }]}>
                 {m.label}
               </Text>
               <View style={[styles.macroTrack, { backgroundColor: colors.border }]}>
@@ -166,7 +167,7 @@ export default function DietScreen() {
                   ]}
                 />
               </View>
-              <Text style={[styles.macroVal, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+              <Text style={[colors.typography.bodyMedium, { color: colors.foreground, fontSize: 13, width: 40, textAlign: "right" }]}>
                 {m.value}g
               </Text>
             </View>
@@ -182,10 +183,10 @@ export default function DietScreen() {
                 <View style={[styles.mealTypeIcon, { backgroundColor: type.color + "20" }]}>
                   <Ionicons name={type.icon} size={16} color={type.color} />
                 </View>
-                <Text style={[styles.mealTypeLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                <Text style={[colors.typography.bodyMedium, { color: colors.foreground, flex: 1 }]}>
                   {type.label}
                 </Text>
-                <Text style={[styles.mealTypeCal, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
                   {meals.reduce((s, m) => s + m.calories, 0)} kcal
                 </Text>
               </View>
@@ -195,7 +196,7 @@ export default function DietScreen() {
                   style={[styles.emptyMealRow, { borderColor: colors.border }]}
                 >
                   <Ionicons name="add-circle-outline" size={18} color={colors.mutedForeground} />
-                  <Text style={[styles.emptyMealTxt, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
                     Add {type.label.toLowerCase()}
                   </Text>
                 </TouchableOpacity>
@@ -203,14 +204,14 @@ export default function DietScreen() {
                 meals.map((meal) => (
                   <GlassCard key={meal.id} style={styles.mealCard}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.mealName, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>
+                      <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>
                         {meal.name}
                       </Text>
-                      <Text style={[styles.mealMeta, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                      <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>
                         P: {meal.protein}g · C: {meal.carbs}g · F: {meal.fat}g
                       </Text>
                     </View>
-                    <Text style={[styles.mealCal, { color: type.color, fontFamily: "Inter_700Bold" }]}>
+                    <Text style={[colors.typography.h3, { color: type.color }]}>
                       {meal.calories}
                     </Text>
                     <TouchableOpacity onPress={() => {
@@ -230,9 +231,9 @@ export default function DietScreen() {
       {/* Add meal modal */}
       <Modal visible={showAdd} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border, borderTopLeftRadius: colors.radiusLarge, borderTopRightRadius: colors.radiusLarge }]}>
             <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+            <Text style={[colors.typography.h2, { color: colors.foreground }]}>
               Add Meal
             </Text>
 
@@ -248,13 +249,14 @@ export default function DietScreen() {
                       {
                         backgroundColor: selectedType === t.key ? t.color + "20" : colors.muted,
                         borderColor: selectedType === t.key ? t.color : colors.border,
+                        borderRadius: colors.radius,
                       },
                     ]}
                   >
                     <Text
                       style={[
-                        styles.typeChipTxt,
-                        { color: selectedType === t.key ? t.color : colors.mutedForeground, fontFamily: "Inter_500Medium" },
+                        colors.typography.bodyMedium,
+                        { color: selectedType === t.key ? t.color : colors.mutedForeground },
                       ]}
                     >
                       {t.label}
@@ -269,7 +271,7 @@ export default function DietScreen() {
               onChangeText={setSearch}
               placeholder="Search Indian foods..."
               placeholderTextColor={colors.mutedForeground}
-              style={[styles.searchInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted, fontFamily: "Inter_400Regular" }]}
+              style={[styles.searchInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted, borderRadius: colors.radiusSmall }, colors.typography.body]}
             />
 
             <ScrollView style={{ maxHeight: 240 }} showsVerticalScrollIndicator={false}>
@@ -280,14 +282,14 @@ export default function DietScreen() {
                   style={[styles.foodRow, { borderBottomColor: colors.border }]}
                 >
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.foodName, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>
+                    <Text style={[colors.typography.bodyMedium, { color: colors.foreground }]}>
                       {food.name}
                     </Text>
-                    <Text style={[styles.foodMacros, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                    <Text style={[colors.typography.tiny, { color: colors.mutedForeground }]}>
                       P:{food.protein}g C:{food.carbs}g F:{food.fat}g
                     </Text>
                   </View>
-                  <Text style={[styles.foodCal, { color: colors.secondary, fontFamily: "Inter_700Bold" }]}>
+                  <Text style={[colors.typography.h3, { color: colors.secondary }]}>
                     {food.calories} kcal
                   </Text>
                 </TouchableOpacity>
@@ -300,7 +302,7 @@ export default function DietScreen() {
                 onChangeText={setCustomName}
                 placeholder="Custom food name"
                 placeholderTextColor={colors.mutedForeground}
-                style={[styles.customInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted, flex: 1, fontFamily: "Inter_400Regular" }]}
+                style={[styles.customInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted, flex: 1, borderRadius: colors.radiusSmall }, colors.typography.body]}
               />
               <TextInput
                 value={customCal}
@@ -308,15 +310,15 @@ export default function DietScreen() {
                 placeholder="kcal"
                 placeholderTextColor={colors.mutedForeground}
                 keyboardType="number-pad"
-                style={[styles.customInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted, width: 70, fontFamily: "Inter_400Regular" }]}
+                style={[styles.customInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted, width: 70, borderRadius: colors.radiusSmall }, colors.typography.body]}
               />
               <TouchableOpacity onPress={handleAddCustom} style={[styles.customAddBtn, { backgroundColor: colors.secondary }]}>
-                <Ionicons name="add" size={20} color="#FFFFFF" />
+                <Ionicons name="add" size={20} color={colors.primaryForeground} />
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity onPress={() => { setShowAdd(false); setSearch(""); }} style={styles.cancelBtn}>
-              <Text style={[styles.cancelTxt, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Close</Text>
+              <Text style={[colors.typography.body, { color: colors.mutedForeground }]}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -329,8 +331,8 @@ function CalStat({ label, value, color }: { label: string; value: string; color:
   const colors = useColors();
   return (
     <View style={{ gap: 2 }}>
-      <Text style={{ color: colors.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}>{label}</Text>
-      <Text style={{ color, fontSize: 16, fontFamily: "Inter_700Bold" }}>{value} kcal</Text>
+      <Text style={[colors.typography.caption, { color: colors.mutedForeground }]}>{label}</Text>
+      <Text style={[colors.typography.h3, { color }]}>{value} kcal</Text>
     </View>
   );
 }
@@ -340,43 +342,27 @@ const styles = StyleSheet.create({
   headerGrad: { position: "absolute", top: 0, left: 0, right: 0, height: 200 },
   scroll: { paddingHorizontal: 16, gap: 14 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  pageTitle: { fontSize: 28 },
   addBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20 },
-  addBtnTxt: { color: "#FFFFFF", fontSize: 14 },
   summaryCard: { flexDirection: "row", padding: 16, gap: 20, alignItems: "center" },
   summaryLeft: {},
   summaryRight: { flex: 1, gap: 12 },
   macroCard: { padding: 16, gap: 12 },
   macroRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  macroLabel: { fontSize: 13, width: 54 },
   macroTrack: { flex: 1, height: 6, borderRadius: 3, overflow: "hidden" },
   macroFill: { height: 6, borderRadius: 3 },
-  macroVal: { fontSize: 13, width: 40, textAlign: "right" },
   mealTypeHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4, marginBottom: 8 },
   mealTypeIcon: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  mealTypeLabel: { fontSize: 15, flex: 1 },
-  mealTypeCal: { fontSize: 13 },
   emptyMealRow: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderStyle: "dashed", borderRadius: 12, padding: 12, marginBottom: 8 },
-  emptyMealTxt: { fontSize: 13 },
   mealCard: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, marginBottom: 8 },
-  mealName: { fontSize: 14 },
-  mealMeta: { fontSize: 12, marginTop: 2 },
-  mealCal: { fontSize: 16 },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "#00000060" },
-  modalSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, borderWidth: 1, gap: 12, maxHeight: "85%" },
+  modalSheet: { padding: 20, borderWidth: 1, gap: 12, maxHeight: "85%" },
   modalHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center" },
-  modalTitle: { fontSize: 20 },
   typeRow: { flexDirection: "row", gap: 8 },
-  typeChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
-  typeChipTxt: { fontSize: 13 },
-  searchInput: { height: 44, borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, fontSize: 14 },
+  typeChip: { paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1 },
+  searchInput: { height: 44, borderWidth: 1, paddingHorizontal: 12, fontSize: 14 },
   foodRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 0.5 },
-  foodName: { fontSize: 14 },
-  foodMacros: { fontSize: 11, marginTop: 2 },
-  foodCal: { fontSize: 14 },
   customRow: { flexDirection: "row", gap: 8 },
-  customInput: { height: 44, borderRadius: 10, borderWidth: 1, paddingHorizontal: 10, fontSize: 13 },
+  customInput: { height: 44, borderWidth: 1, paddingHorizontal: 10, fontSize: 13 },
   customAddBtn: { width: 44, height: 44, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   cancelBtn: { alignItems: "center", padding: 8 },
-  cancelTxt: { fontSize: 14 },
 });

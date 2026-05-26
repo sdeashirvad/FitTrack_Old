@@ -22,7 +22,11 @@
       }
     },
     "android": {
-      "permissions": ["CAMERA", "READ_MEDIA_IMAGES", "ACTIVITY_RECOGNITION"]
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "ACTIVITY_RECOGNITION"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -43,7 +47,8 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

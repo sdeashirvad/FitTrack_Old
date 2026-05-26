@@ -1,0 +1,311 @@
+You are continuing development of the AI-powered InBody Report Analysis feature.
+
+IMPORTANT:
+
+* Do NOT redesign existing UI.
+* Do NOT modify authentication flow.
+* Do NOT modify already working features.
+* Reuse existing components/styles/hooks/services.
+* Focus ONLY on completing AI InBody analysis functionality.
+* Understand the current project structure before making changes.
+* Extend existing code instead of rewriting unrelated parts.
+
+=====================================================
+GOAL
+====
+
+User uploads:
+
+* InBody image
+* InBody PDF
+* Camera scan
+
+System should:
+
+1. Extract OCR text
+2. Extract important body metrics
+3. Send compact structured data to AI
+4. Generate professional fitness analysis
+5. Return strict clean JSON
+6. Display polished AI analysis in frontend
+
+=====================================================
+CURRENT ISSUES TO FIX
+=====================
+
+Current frontend shows:
+
+* "--"
+* missing values
+* incorrect AI metric formatting
+
+Root cause:
+
+* AI returns descriptive strings instead of numeric values
+* fallback response structure is inconsistent
+* some fields return labels instead of actual metric values
+
+Fix these issues completely.
+
+=====================================================
+AI RESPONSE RULES
+=================
+
+AI MUST:
+
+* Return ONLY JSON
+* Never return markdown
+* Never omit fields
+* Preserve actual numeric values
+* Keep responses concise
+* Use short descriptions
+* Avoid unnecessary text
+
+IMPORTANT:
+
+These fields MUST contain actual numeric values as strings:
+
+Correct:
+"bmr": "1720"
+"metabolicAge": "24"
+"level": "7"
+
+Wrong:
+"bmr": "Estimated BMR is 1720 kcal"
+"metabolicAge": "Metabolic age is 24"
+"level": "Normal"
+
+=====================================================
+FINAL AI RESPONSE FORMAT
+========================
+
+{
+"overallSummary": "",
+"fitnessLevel": "",
+
+"bodyFatAnalysis": {
+"status": "",
+"description": "",
+"recommendation": ""
+},
+
+"muscleMassAnalysis": {
+"status": "",
+"description": "",
+"recommendation": ""
+},
+
+"metabolismInsights": {
+"bmr": "",
+"metabolicAge": "",
+"description": ""
+},
+
+"visceralFatAnalysis": {
+"level": "",
+"risk": "",
+"recommendation": ""
+},
+
+"strengths": [""],
+
+"weaknesses": [""],
+
+"healthRisks": [""],
+
+"recommendations": [""],
+
+"workoutPlan": {
+"goal": "",
+"planType": "",
+
+```
+"weeklySchedule": [
+  {
+    "day": "",
+    "focus": "",
+    "duration": "",
+    "exercises": [""]
+  }
+],
+
+"cardioRecommendation": ""
+```
+
+},
+
+"goalSuggestions": [""]
+}
+
+=====================================================
+REMOVE DIET PLAN COMPLETELY
+===========================
+
+Do NOT generate:
+
+* diet plans
+* calories
+* macros
+* meals
+* supplements
+
+Diet feature will be implemented separately later.
+
+Remove all diet-related:
+
+* interfaces
+* frontend rendering
+* AI schema
+* fallback data
+* prompts
+
+=====================================================
+OCR REQUIREMENTS
+================
+
+Extract these metrics reliably:
+
+* Weight
+* BMI
+* Body Fat %
+* Skeletal Muscle Mass
+* Visceral Fat
+* BMR
+* Metabolic Age
+* Body Water
+* Protein
+
+Handle:
+
+* noisy OCR
+* spacing issues
+* different report layouts
+* uppercase/lowercase text
+
+Use regex extraction utilities.
+
+=====================================================
+VALIDATION LAYER
+================
+
+Before sending AI response to frontend:
+
+* sanitize numbers
+* ensure required fields exist
+* ensure arrays always exist
+* convert invalid values safely
+* extract numeric values from strings
+
+Example:
+"Estimated BMR is 1720 kcal"
+→ "1720"
+
+=====================================================
+FRONTEND REQUIREMENTS
+=====================
+
+Frontend should properly display:
+
+* Body score
+* Weight
+* BMI
+* Body Fat
+* Muscle Mass
+* BMR
+* Metabolic Age
+* Visceral Fat
+* AI Summary
+* Strengths
+* Weaknesses
+* Recommendations
+* Workout Plan
+
+Never show:
+
+* "--"
+* undefined
+* null
+
+Always use safe fallbacks.
+
+=====================================================
+UI REQUIREMENTS
+===============
+
+Do NOT redesign UI.
+
+Only improve:
+
+* AI rendering
+* loading states
+* progress states
+* result mapping
+* metric rendering
+
+Maintain:
+
+* current colors
+* current layout
+* existing component structure
+
+=====================================================
+PERFORMANCE OPTIMIZATION
+========================
+
+* Reduce token usage
+* Keep prompts compact
+* Limit OCR text size
+* Prefer extracted metrics over raw OCR
+* Use OCR excerpt only if required
+
+=====================================================
+ERROR HANDLING
+==============
+
+Handle:
+
+* OCR failures
+* malformed JSON
+* AI timeout
+* empty metrics
+* upload failure
+* unsupported files
+
+Fallback:
+
+* return structured demo analysis
+
+=====================================================
+EXPECTED FINAL RESULT
+=====================
+
+User uploads report →
+
+AI extracts metrics →
+
+AI generates structured analysis →
+
+Frontend displays premium fitness dashboard with proper values and AI insights.
+
+The experience should feel similar to:
+
+* InBody app
+* Fitbit AI
+* Whoop
+* premium fitness tracker apps
+
+=====================================================
+IMPORTANT
+=========
+
+Keep architecture modular:
+
+* AI utilities
+* OCR utilities
+* validators
+* reusable components
+* helper functions
+
+Do not create unnecessary files.
+Do not rewrite unrelated code.
+Only improve the AI InBody analysis flow.

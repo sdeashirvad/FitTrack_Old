@@ -4,6 +4,7 @@ import {
   date,
   index,
   jsonb,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -20,6 +21,8 @@ import {
   roleType,
   userStatus,
 } from "./lookups";
+
+export const authProviderEnum = pgEnum("auth_provider", ["email", "google", "phone", "apple"]);
 
 export const roles = pgTable(
   "roles",
@@ -43,6 +46,8 @@ export const users = pgTable(
   "users",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+
+    username: text("username").unique(),
 
     email: text("email")
       .notNull()
@@ -89,6 +94,10 @@ export const users = pgTable(
     }),
   },
   (table) => ({
+    usernameIndex: uniqueIndex("users_username_idx").on(
+      table.username,
+    ),
+
     phoneIndex: index("users_phone_idx").on(
       table.phone,
     ),
@@ -123,6 +132,26 @@ export const userProfiles = pgTable(
     locale: text("locale"),
 
     bio: text("bio"),
+
+    // Auth provider that was used to create this account
+    authProvider: authProviderEnum("auth_provider").default("email"),
+
+    // Whether the user has completed the post-login setup wizard
+    onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
+
+    // JSON blob of all data collected during onboarding
+    onboardingData: jsonb("onboarding_data"),
+
+    // Fitness metrics from onboarding
+    heightCm: text("height_cm"),
+    weightKg: text("weight_kg"),
+    bmi: text("bmi"),
+    bodyFatPercent: text("body_fat_percent"),
+    fitnessGoal: text("fitness_goal"),
+    activityLevel: text("activity_level"),
+    dietaryPreference: text("dietary_preference"),
+    workoutExperience: text("workout_experience"),
+    region: text("region"),
 
     createdAt: timestamp("created_at", {
       withTimezone: true,

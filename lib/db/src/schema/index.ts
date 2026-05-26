@@ -14,6 +14,7 @@ export * from "./files";
 export * from "./audit";
 export * from "./security";
 export * from "./ai";
+export * from "./inbody";
 
 import * as usersSchema from "./users";
 import * as gymsSchema from "./gyms";
@@ -30,6 +31,7 @@ import * as filesSchema from "./files";
 import * as auditSchema from "./audit";
 import * as securitySchema from "./security";
 import * as aiSchema from "./ai";
+import * as inbodySchema from "./inbody";
 
 export const schema = {
   ...usersSchema,
@@ -47,4 +49,5 @@ export const schema = {
   ...auditSchema,
   ...securitySchema,
   ...aiSchema,
+  ...inbodySchema,
 };

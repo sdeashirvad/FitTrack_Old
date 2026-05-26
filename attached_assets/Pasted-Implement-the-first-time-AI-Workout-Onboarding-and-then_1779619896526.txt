@@ -1,0 +1,224 @@
+Implement the first-time AI Workout Onboarding and then in workout section you can add a option button change where user will open and change  existing workout system  and it's flow using the existing workout system, existing navigation, existing UI structure, and existing InBody analysis flow already implemented in the app. Do NOT redesign the current workout dashboard or rewrite working features. Extend the current system cleanly.
+
+When a user opens the Workout tab for the first time, check:
+
+* if user already selected a fitness goal
+* if user already has an active workout plan
+* if user already uploaded an InBody report
+
+If user already completed onboarding:
+→ open existing workout dashboard normally.
+
+If not:
+→ show onboarding flow before entering workouts.
+
+Show modern selectable goal cards:
+
+* Fat Loss
+* Muscle Gain
+* Body Recomposition
+* Strength
+* Athletic Performance
+* General Fitness
+
+Each card should include:
+
+* icon
+* title
+* short beginner-friendly description
+* active selected state
+
+Do NOT redesign app theme.
+Match current UI style/colors/components.
+
+Add:
+“Not sure what’s best for you?”
+→ “Ask AI”
+
+If user clicks Ask AI:
+
+Check whether InBody report already exists.
+
+Use existing InBody analysis data already stored in DB/API.
+
+AI should analyze:
+
+* body fat %
+* BMI
+* skeletal muscle mass
+* obesity level
+* visceral fat
+* waist hip ratio
+* weight control
+* body composition
+
+Then AI should recommend:
+
+* best starting goal
+* why it is recommended
+* transformation priority
+* estimated realistic timeline
+* beginner suitability
+
+Example:
+“Based on your current body fat percentage and visceral fat level, we recommend starting with Fat Loss + Beginner Strength Training before aggressive muscle building.”
+
+Show:
+
+* AI Recommended Goal
+* short reasoning
+* confidence badge
+* “Use This Goal” button
+
+If no report exists:
+show:
+“To give accurate recommendations, upload your InBody report first.”
+
+Buttons:
+
+* Upload Report
+* Scan Report
+* Choose Goal Manually
+
+Do NOT block the user completely.
+
+After goal selection:
+generate workout strategy using:
+
+* selected goal
+* InBody metrics
+* beginner/intermediate level
+* obesity level
+* muscle balance
+* recovery ability
+
+IMPORTANT:
+AI should NOT generate random exercise lists directly.
+
+AI should only decide:
+
+* workout split
+* intensity
+* training frequency
+* cardio frequency
+* progression style
+* beginner friendliness
+
+Example:
+
+* Push Pull Legs
+* Upper Lower
+* Full Body
+* Hybrid Fat Loss Split
+
+Use exercisedb.dev API for:
+
+* exercise data
+* exercise images
+* target muscles
+* instructions
+* exercise GIFs/images
+* difficulty
+* equipment
+* body part
+* secondary muscles
+
+Backend should fetch exercises dynamically from exercisedb.dev based on:
+
+* selected split
+* target muscles
+* beginner/intermediate level
+* user goal
+
+Each exercise card should include:
+
+* exercise image/GIF from exercisedb.dev
+* exercise name
+* target muscle
+* sets
+* reps
+* rest duration
+* estimated calories
+* difficulty
+* equipment
+* short instructions
+
+Example:
+
+AI decides:
+
+* Fat loss
+* 4 day split
+* beginner-friendly
+* moderate cardio
+
+Then backend fetches exercises from exercisedb.dev:
+
+* chest exercises
+* back exercises
+* leg exercises
+* cardio movements
+
+and builds structured workout plan dynamically.
+
+Do NOT hardcode exercises.
+Use exercisedb.dev API dynamically.
+
+Cache responses locally/backend when possible for performance.
+
+After onboarding:
+populate existing workout dashboard dynamically with:
+
+* active workout
+* training programs
+* workout cards
+* exercise cards
+* calories
+* sets
+* duration
+* difficulty
+
+Reuse current UI components already implemented.
+
+Save to DB:
+
+* onboarding completed
+* selected goal
+* AI recommended goal
+* workout split
+* generated workout plan
+* exercise IDs from exercisedb.dev
+
+Handle:
+
+* no exercises returned
+* API rate limits
+* API failure
+* AI failure
+* incomplete InBody data
+* skipped onboarding
+
+The experience should feel like:
+
+* intelligent fitness coach
+* beginner-friendly onboarding
+* personalized consultation
+
+NOT just:
+“Select your workout.”
+
+AI should help users discover the best starting fitness direction for their body condition and long-term health.
+
+New user opens Workout →
+
+AI onboarding appears →
+
+User selects goal OR asks AI →
+
+AI recommends best goal using existing InBody analysis →
+
+System generates personalized workout strategy →
+
+Exercises fetched dynamically from exercisedb.dev →
+
+Existing workout dashboard becomes fully personalized and data-driven.

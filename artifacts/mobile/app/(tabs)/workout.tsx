@@ -1,8 +1,8 @@
 import { useFitness } from "@/context/FitnessContext";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { getApiBaseUrl } from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
-import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useVideoPlayer, VideoView } from "expo-video";
@@ -151,35 +151,6 @@ function getYoutubeEmbedUrl(exercise: any) {
   return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&playsinline=1&loop=1&playlist=${videoId}&start=0`;
 }
 
-function resolveApiHost() {
-  const hostUri =
-    typeof Constants.manifest?.debuggerHost === "string"
-      ? Constants.manifest.debuggerHost
-      : typeof Constants.expoConfig?.hostUri === "string"
-      ? Constants.expoConfig.hostUri
-      : null;
-
-  if (hostUri) {
-    const host = hostUri.includes("//")
-      ? hostUri.split("//")[1].split(":")[0]
-      : hostUri.split(":")[0];
-
-    if (Platform.OS === "android" && host === "localhost") {
-      return "10.0.2.2";
-    }
-
-    return host;
-  }
-
-  return Platform.OS === "android" ? "10.0.2.2" : "localhost";
-}
-
-function getApiBase() {
-  const d = process.env.EXPO_PUBLIC_DOMAIN;
-  if (d) return `https://${d}`;
-  return `http://${resolveApiHost()}:5000`;
-}
-
 const DIFF_COLOR: Record<string, string> = {
   Beginner: "#22C55E",
   Intermediate: "#F59E0B",
@@ -213,7 +184,7 @@ export default function WorkoutScreen() {
 
   const checkOnboarding = async () => {
     try {
-      const res = await fetch(`${getApiBase()}/api/workout/onboarding/status`, {
+      const res = await fetch(`${getApiBaseUrl()}/workout/onboarding/status`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -241,7 +212,7 @@ export default function WorkoutScreen() {
       {
         text: "Continue",
         onPress: async () => {
-          try { await fetch(`${getApiBase()}/api/workout/onboarding/reset`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }); } catch {}
+          try { await fetch(`${getApiBaseUrl()}/workout/onboarding/reset`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }); } catch {}
           setDynamicPlan(null); setActiveGoal(null); setDynamicStrategy(null);
           setPlaylistDay(null); setShowOnboarding(true);
         },

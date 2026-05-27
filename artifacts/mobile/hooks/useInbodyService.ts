@@ -5,32 +5,8 @@
  * Mirrors the requestJson pattern from AuthContext.
  */
 
-import Constants from "expo-constants";
 import { Platform } from "react-native";
-
-// ─── Resolve API base URL (same logic as AuthContext) ─────────────────────────
-function resolveApiHost() {
-  const hostUri =
-    typeof Constants.manifest?.debuggerHost === "string"
-      ? Constants.manifest.debuggerHost
-      : typeof Constants.expoConfig?.hostUri === "string"
-      ? Constants.expoConfig.hostUri
-      : null;
-
-  if (hostUri) {
-    const host = hostUri.includes("//")
-      ? hostUri.split("//")[1].split(":")[0]
-      : hostUri.split(":")[0];
-    return Platform.OS === "android"
-      ? host === "localhost" ? "10.0.2.2" : host
-      : host;
-  }
-  return Platform.OS === "android" ? "10.0.2.2" : "localhost";
-}
-
-function getApiBaseUrl() {
-  return `http://${resolveApiHost()}:5000`;
-}
+import { getApiBaseUrl } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface InBodyMetrics {
@@ -101,7 +77,7 @@ export async function uploadInbodyReport(
   token: string,
   onProgress?: (p: UploadProgress) => void,
 ): Promise<UploadResponse> {
-  const url = `${getApiBaseUrl()}/api/inbody/upload`;
+  const url = `${getApiBaseUrl()}/inbody/upload`;
 
   onProgress?.({ step: "uploading", percent: 20 });
 
@@ -159,7 +135,7 @@ export async function uploadInbodyReport(
 
 // ─── List user's reports ──────────────────────────────────────────────────────
 export async function listInbodyReports(token: string): Promise<InBodyReport[]> {
-  const url = `${getApiBaseUrl()}/api/inbody/reports`;
+  const url = `${getApiBaseUrl()}/inbody/reports`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -170,7 +146,7 @@ export async function listInbodyReports(token: string): Promise<InBodyReport[]> 
 
 // ─── Get a single report ──────────────────────────────────────────────────────
 export async function getInbodyReport(id: string, token: string): Promise<InBodyReport> {
-  const url = `${getApiBaseUrl()}/api/inbody/reports/${id}`;
+  const url = `${getApiBaseUrl()}/inbody/reports/${id}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -181,7 +157,7 @@ export async function getInbodyReport(id: string, token: string): Promise<InBody
 
 // ─── Run Gemini AI analysis on an existing report ─────────────────────────────
 export async function analyzeInbodyReport(reportId: string, token: string): Promise<AnalyzeResponse> {
-  const url = `${getApiBaseUrl()}/api/inbody/analyze/${reportId}`;
+  const url = `${getApiBaseUrl()}/inbody/analyze/${reportId}`;
   const res = await fetch(url, {
     method: "POST",
     headers: {

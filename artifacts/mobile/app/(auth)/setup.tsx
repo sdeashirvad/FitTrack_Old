@@ -1,6 +1,6 @@
-import Constants from "expo-constants";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { getApiBaseUrl } from "@/lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
@@ -99,29 +99,6 @@ function Field({ icon, placeholder, value, onChangeText, keyboard = "default" }:
   );
 }
 
-// ─── API Host Resolution ──────────────────────────────────────────────────────
-function resolveApiHost() {
-  const hostUri =
-    typeof Constants.manifest?.debuggerHost === "string"
-      ? Constants.manifest.debuggerHost
-      : typeof Constants.expoConfig?.hostUri === "string"
-      ? Constants.expoConfig.hostUri
-      : null;
-
-  if (hostUri) {
-    const host = hostUri.includes("//")
-      ? hostUri.split("//")[1].split(":")[0]
-      : hostUri.split(":")[0];
-
-    if (Platform.OS === "android") {
-      return host === "localhost" ? "10.0.2.2" : host;
-    }
-    return host;
-  }
-
-  return Platform.OS === "android" ? "10.0.2.2" : "localhost";
-}
-
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function SetupScreen() {
   const insets = useSafeAreaInsets();
@@ -218,8 +195,7 @@ export default function SetupScreen() {
           : undefined,
       };
 
-      const host = resolveApiHost();
-      const res = await fetch(`http://${host}:5000/api/auth/onboarding`, {
+      const res = await fetch(`${getApiBaseUrl()}/auth/onboarding`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

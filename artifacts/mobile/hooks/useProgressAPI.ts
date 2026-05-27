@@ -7,15 +7,8 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { Platform } from "react-native";
 import { useAuth } from "@/context/AuthContext";
-
-function getApiBase(): string {
-  const d = process.env.EXPO_PUBLIC_DOMAIN;
-  if (d) return `https://${d}/api`;
-  if (Platform.OS === "android") return "http://10.0.2.2:3001/api";
-  return "http://localhost:3001/api";
-}
+import { getApiBaseUrl } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -115,7 +108,7 @@ export function useProgressAPI() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${getApiBase()}/progress/dashboard`, {
+      const res = await fetch(`${getApiBaseUrl()}/progress/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -145,7 +138,7 @@ export function useProgressAPI() {
     if (!token) return EMPTY_AI_INSIGHTS;
     setInsightsLoading(true);
     try {
-      const res = await fetch(`${getApiBase()}/progress/ai-insights`, {
+      const res = await fetch(`${getApiBaseUrl()}/progress/ai-insights`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -163,7 +156,7 @@ export function useProgressAPI() {
   const logCheckin = useCallback(async (data: Omit<DailyCheckin, "id" | "checkinDate">) => {
     if (!token) return null;
     try {
-      const res = await fetch(`${getApiBase()}/progress/checkin`, {
+      const res = await fetch(`${getApiBaseUrl()}/progress/checkin`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -180,7 +173,7 @@ export function useProgressAPI() {
   const logWeight = useCallback(async (weightKg: number, notes?: string) => {
     if (!token) return null;
     try {
-      const res = await fetch(`${getApiBase()}/progress/weight`, {
+      const res = await fetch(`${getApiBaseUrl()}/progress/weight`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ weightKg, notes }),

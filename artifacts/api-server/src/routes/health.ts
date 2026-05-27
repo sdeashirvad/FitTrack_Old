@@ -1,11 +1,34 @@
-import { Router, type IRouter } from "express";
-import { HealthCheckResponse } from "@workspace/api-zod";
+import { Router } from "express";
+import { getHealthStatus } from "./health.controller";
 
-const router: IRouter = Router();
+const router = Router();
 
-router.get("/healthz", (_req, res) => {
-  const data = HealthCheckResponse.parse({ status: "ok" });
-  res.json(data);
-});
+/**
+ * @openapi
+ * /api/health:
+ *   get:
+ *     summary: Health check endpoint
+ *     description: Returns a 200 status if the server is running.
+ *     tags:
+ *       - System
+ *     responses:
+ *       '200':
+ *         description: Server is healthy.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "ok"
+ *                 message:
+ *                   type: string
+ *                   example: "Server is running"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
+router.get("/health", getHealthStatus);
 
 export default router;

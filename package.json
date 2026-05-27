@@ -4,6 +4,9 @@
   "license": "MIT",
   "scripts": {
     "preinstall": "node -e \"['package-lock.json','yarn.lock'].forEach(f=>{try{require('fs').unlinkSync(f)}catch{}})\"",
+    "dev:backend": "pnpm --filter @workspace/api-server run dev",
+    "dev:mobile": "pnpm --filter @workspace/mobile run dev",
+    "dev:mobile:prod": "cross-env EXPO_PUBLIC_USE_PROD_API=true pnpm --filter @workspace/mobile run dev",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "db:push": "pnpm --filter @workspace/db run push",
     "db:push-force": "pnpm --filter @workspace/db run push-force",

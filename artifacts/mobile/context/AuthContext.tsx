@@ -1,9 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Constants from "expo-constants";
 import * as WebBrowser from "expo-web-browser";
 import { createURL } from "expo-linking";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Platform } from "react-native";
+import { getApiBaseUrl } from "@/lib/api";
 
 // Required for OAuth on iOS/Android
 WebBrowser.maybeCompleteAuthSession();
@@ -48,34 +47,6 @@ const API_TOKEN_KEY = "@fittrack_token";
 const API_USER_KEY = "@fittrack_user";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// ─── API host resolution ──────────────────────────────────────────────────────
-function resolveApiHost() {
-  const hostUri =
-    typeof Constants.manifest?.debuggerHost === "string"
-      ? Constants.manifest.debuggerHost
-      : typeof Constants.expoConfig?.hostUri === "string"
-      ? Constants.expoConfig.hostUri
-      : null;
-
-  if (hostUri) {
-    const host = hostUri.includes("//")
-      ? hostUri.split("//")[1].split(":")[0]
-      : hostUri.split(":")[0];
-
-    if (Platform.OS === "android") {
-      return host === "localhost" ? "10.0.2.2" : host;
-    }
-    return host;
-  }
-
-  return Platform.OS === "android" ? "10.0.2.2" : "localhost";
-}
-
-function getApiBaseUrl() {
-  const host = resolveApiHost();
-  return `http://${host}:5000`;
-}
 
 // ─── Fetch helper ─────────────────────────────────────────────────────────────
 async function requestJson<T>(path: string, init: RequestInit = {}, token?: string | null) {
@@ -157,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Register ───────────────────────────────────────────────────────────────
   const register = async (email: string, username: string, password: string, role: UserRole = "member") => {
-    const response = await requestJson<{ token: string; user: User }>("/api/auth/register", {
+    const response = await requestJson<{ token: string; user: User }>("/auth/register", {
       method: "POST",
       body: JSON.stringify({ email, username, password, role }),
     });
@@ -166,7 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Email Login ─────────────────────────────────────────────────────────────
   const login = async (email: string, password: string) => {
-    const response = await requestJson<{ token: string; user: User }>("/api/auth/login", {
+    const response = await requestJson<{ token: string; user: User }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
@@ -175,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Phone Login ─────────────────────────────────────────────────────────────
   const loginWithPhone = async (phone: string, otp: string) => {
-    const response = await requestJson<{ token: string; user: User }>("/api/auth/login-phone", {
+    const response = await requestJson<{ token: string; user: User }>("/auth/login-phone", {
       method: "POST",
       body: JSON.stringify({ phone, otp }),
     });
@@ -186,7 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithGoogle = async () => {
     // 1. Get the Supabase Google OAuth redirect URL from our backend
     const redirectUrl = createURL("auth/callback");
-    const { url } = await requestJson<{ url: string }>("/api/auth/google/url", {
+    const { url } = await requestJson<{ url: string }>("/auth/google/url", {
       method: "POST",
       body: JSON.stringify({ redirectTo: redirectUrl }),
     });
@@ -210,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // 4. Exchange Supabase tokens for FitTrack JWT
     const response = await requestJson<{ token: string; user: User; isNewUser: boolean }>(
-      "/api/auth/google/callback",
+      "/auth/google/callback",
       {
         method: "POST",
         body: JSON.stringify({ accessToken, refreshToken }),
@@ -224,7 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       if (token) {
-        await requestJson("/api/auth/logout", { method: "POST" }, token);
+        await requestJson("/auth/logout", { method: "POST" }, token);
       }
     } catch {
       // Best effort — always clear local state
@@ -237,7 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ─── Refresh profile from server ─────────────────────────────────────────────
   const refreshProfile = async () => {
     if (!token) return;
-    const response = await requestJson<{ user: User }>("/api/auth/profile", {}, token);
+    const response = await requestJson<{ user: User }>("/auth/profile", {}, token);
     await AsyncStorage.setItem(API_USER_KEY, JSON.stringify(response.user));
     setUser(response.user);
   };

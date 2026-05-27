@@ -6,6 +6,7 @@ import { db, userProfiles, users } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import type { User, UserProfile } from "@workspace/db";
 import { logger } from "./logger";
+import ws from "ws";
 
 export { logger };
 
@@ -44,7 +45,18 @@ if ((!SUPABASE_URL || !SUPABASE_ANON_KEY) && process.env.NODE_ENV === "productio
 // Use placeholder URLs in dev if not configured — Supabase operations will
 // fail gracefully at runtime, but the server will start.
 export const supabase = SUPABASE_URL
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+      global: {
+        fetch: (...args) => fetch(...args),
+      },
+      realtime: {
+        transport: ws,
+      },
+    })
   : createClient("https://placeholder.supabase.co", "placeholder-anon-key");
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
